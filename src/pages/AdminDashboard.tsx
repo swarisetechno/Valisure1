@@ -123,7 +123,10 @@ const AdminDashboard = () => {
           </button>
           {sidebarOpen && expandedMenu.projects && (
             <div className="flex flex-col gap-2 pl-12 pr-4 py-2">
-              <button className="text-sm text-gray-300 hover:text-white text-left transition">
+              <button 
+                onClick={() => navigate("/create-project")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
                 New projects
               </button>
               <button className="text-sm text-gray-300 hover:text-white text-left transition">
@@ -221,7 +224,7 @@ const AdminDashboard = () => {
           {/* Title and Button */}
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-4xl font-bold text-[#1F1B16]">Admin Dashboard</h1>
-            <button className="px-8 py-3 bg-[#11172B] text-white rounded-full font-semibold hover:opacity-90 transition flex items-center gap-2">
+            <button onClick={() => navigate("/create-project")} className="px-8 py-3 bg-[#11172B] text-white rounded-full font-semibold hover:opacity-90 transition flex items-center gap-2">
               <span className="text-lg">+</span>
               Create Project
             </button>

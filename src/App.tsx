@@ -7,6 +7,7 @@ import Index from "./pages/Index.tsx";
 import Signup from "./pages/Signup.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import AdminDashboard from "./pages/AdminDashboard.tsx";
+import CreateProject from "./pages/CreateProject.tsx";
 import AuthorDashboard from "./pages/AuthorDashboard.tsx";
 import UserDashboard from "./pages/UserDashboard.tsx";
 import ApprovalDashboard from "./pages/ApprovalDashboard.tsx";
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
+          <Route path="/create-project" element={<CreateProject />} />
           <Route path="/author-dashboard" element={<AuthorDashboard />} />
           <Route path="/user-dashboard" element={<UserDashboard />} />
           <Route path="/approval-dashboard" element={<ApprovalDashboard />} />
