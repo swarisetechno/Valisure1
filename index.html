@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <!-- Browser Tab Logo (Favicon) -->
+    <link rel="icon" type="image/png" href="/images/logo.png" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Valisure</title>
+
+    <meta
+      name="description"
+      content="A secure and comprehensive access management hub for streamlined authentication and authorization."
+    />
+    <meta name="author" content="Valisure" />
+
+    <!-- Open Graph (for sharing links) -->
+    <meta property="og:title" content="Valisure" />
+    <meta
+      property="og:description"
+      content="A secure and comprehensive access management hub for streamlined authentication and authorization."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/images/logo.png" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="/images/logo.png" />
+  </head>
+
+  <body>
+    <script>
+      try {
+        const theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) {}
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
