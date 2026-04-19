@@ -166,6 +166,28 @@ const AdminDashboard = () => {
               />
             )}
           </button>
+          {sidebarOpen && expandedMenu.accessControl && (
+            <div className="flex flex-col gap-2 pl-12 pr-4 py-2">
+              <button 
+                onClick={() => navigate("/create-user")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                Create User
+              </button>
+              <button 
+                onClick={() => navigate("/add-user")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                Add User
+              </button>
+              <button 
+                onClick={() => navigate("/manage-user")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                Manage User
+              </button>
+            </div>
+          )}
         </nav>
 
         {/* Footer - Theme & Logout */}
