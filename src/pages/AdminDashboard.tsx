@@ -291,7 +291,7 @@ const AdminDashboard = () => {
                   
                   {/* Column Menu Dropdown */}
                   {showColumnMenu && (
-                    <div className="absolute right-0 top-12 bg-white border border-gray-300 rounded-lg shadow-lg z-50 w-64 p-4">
+                    <div className="fixed bg-white border border-gray-300 rounded-lg shadow-lg z-50 w-64 p-4 max-h-96 overflow-y-auto" style={{top: '380px', right: '40px'}}>
                       <div className="flex items-center gap-2 mb-4">
                         <LayoutGrid size={18} className="text-gray-700" />
                         <h3 className="text-sm font-bold text-gray-800">Columns</h3>
@@ -396,7 +396,7 @@ const AdminDashboard = () => {
 
             {/* Table Column Headers */}
             <div className="bg-[#B6C0E2] grid gap-4 px-6 py-3 text-xs font-bold text-[#504539] uppercase tracking-wider"
-              style={{gridTemplateColumns: `repeat(${Object.values(visibleColumns).filter(Boolean).length + 1}, minmax(80px, 1fr))`}}>
+              style={{gridTemplateColumns: `repeat(${Object.values(visibleColumns).filter(Boolean).length + 1}, 1fr)`}}>
               {visibleColumns.projId && <div>Proj - ID</div>}
               {visibleColumns.projectName && <div>Project Name</div>}
               {visibleColumns.changeId && <div>Change ID</div>}
@@ -414,40 +414,40 @@ const AdminDashboard = () => {
             <div className="divide-y divide-gray-200">
               {projects.map((project) => (
                 <div key={project.id} className="grid gap-4 px-6 py-4 items-center hover:bg-gray-50 transition"
-                  style={{gridTemplateColumns: `repeat(${Object.values(visibleColumns).filter(Boolean).length + 1}, minmax(80px, 1fr))`}}>
-                  {visibleColumns.projId && (
-                    <div className="text-sm font-medium text-[#504539] uppercase">
-                      {project.id}
-                    </div>
-                  )}
-                  {visibleColumns.projectName && (
-                    <div>
-                      <p className="font-bold text-sm text-[#504539]">{project.name}</p>
-                      <p className="text-xs text-gray-500">{project.updated}</p>
-                    </div>
-                  )}
-                  {visibleColumns.changeId && (
-                    <div className="text-sm text-[#504539] uppercase">
-                      {project.changeId}
-                    </div>
-                  )}
-                  {visibleColumns.gamp && (
-                    <div className="text-sm text-[#504539] lowercase">
-                      {project.category}
-                    </div>
-                  )}
-                  {visibleColumns.csvCsa && (
-                    <div className="text-sm text-[#504539] uppercase">
-                      {project.csvCsa}
-                    </div>
-                  )}
-                  {visibleColumns.status && (
-                    <div>
-                      <span
-                        className={`px-3 py-1 rounded-lg text-xs font-bold uppercase ${
-                          project.status === "ACTIVE"
-                            ? "bg-[#DCFCE7] text-[#15803D]"
-                            : "bg-[#FCDCDD] text-[#A71C1F]"
+                  style={{gridTemplateColumns: `repeat(${Object.values(visibleColumns).filter(Boolean).length + 1}, 1fr)`}}>
+                    {visibleColumns.projId && (
+                      <div className="text-sm font-medium text-[#504539] uppercase">
+                        {project.id}
+                      </div>
+                    )}
+                    {visibleColumns.projectName && (
+                      <div>
+                        <p className="font-bold text-sm text-[#504539]">{project.name}</p>
+                        <p className="text-xs text-gray-500">{project.updated}</p>
+                      </div>
+                    )}
+                    {visibleColumns.changeId && (
+                      <div className="text-sm text-[#504539] uppercase">
+                        {project.changeId}
+                      </div>
+                    )}
+                    {visibleColumns.gamp && (
+                      <div className="text-sm text-[#504539] lowercase">
+                        {project.category}
+                      </div>
+                    )}
+                    {visibleColumns.csvCsa && (
+                      <div className="text-sm text-[#504539] uppercase">
+                        {project.csvCsa}
+                      </div>
+                    )}
+                    {visibleColumns.status && (
+                      <div>
+                        <span
+                          className={`px-3 py-1 rounded-lg text-xs font-bold uppercase ${
+                            project.status === "ACTIVE"
+                              ? "bg-[#DCFCE7] text-[#15803D]"
+                              : "bg-[#FCDCDD] text-[#A71C1F]"
                         }`}
                       >
                         {project.status}

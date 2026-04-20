@@ -1,11 +1,26 @@
-import { useNavigate } from "react-router-dom";
-import { LogOut, Menu, LayoutDashboard, ChevronLeft, ChevronRight, Sun, Moon } from "lucide-react";
-import { useState } from "react";
+import { useState } from 'react';
+import { ChevronRight, Eye, LogOut, LayoutDashboard, FolderOpen, FileText, Lock, Palette, Search, Moon, Sun, ChevronLeft, ChevronDown, FileStack, Hourglass, CheckCircle2, AlertCircle, Plus, Folder } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-const AuthorDashboard = () => {
+interface DocumentRow {
+  id: string;
+  projectName: string;
+  documentName: string;
+  dueDate: string;
+  priority: 'High' | 'Medium' | 'Low';
+  status: 'Draft' | 'Submitted' | 'Revision required';
+}
+
+export default function AuthorDashboard() {
   const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
+  const [expandedMenu, setExpandedMenu] = useState({
+    dashboard: true,
+    projects: false,
+    templates: false,
+  });
 
   const handleLogout = () => {
     localStorage.removeItem("userRole");
@@ -13,15 +28,109 @@ const AuthorDashboard = () => {
     navigate("/");
   };
 
-  const dashboards = [
-    { name: "Admin Dashboard", path: "/admin-dashboard" },
-    { name: "Author Dashboard", path: "#", current: true },
-    { name: "User Dashboard", path: "/user-dashboard" },
-    { name: "Approval Dashboard", path: "/approval-dashboard" },
+  const statusCards = [
+    {
+      icon: 'clipboard',
+      label: 'DRAFTS',
+      count: '05',
+      borderColor: '#6D81C5',
+      subtitle: '',
+      iconBg: '#30628A'
+    },
+    {
+      icon: 'clock',
+      label: 'PENDING SUBMISSION',
+      count: '03',
+      borderColor: '#FFCC00',
+      subtitle: 'Current',
+      iconBg: '#7F5615'
+    },
+    {
+      icon: 'checkcircle',
+      label: 'COMPLETED',
+      count: '12',
+      borderColor: '#15803D',
+      subtitle: 'Current',
+      iconBg: '#059669'
+    },
+    {
+      icon: 'alert',
+      label: 'NEEDS REVISION',
+      count: '02',
+      borderColor: '#A71C1F',
+      subtitle: '',
+      iconBg: '#BA1A1A'
+    }
   ];
 
+  const documents: DocumentRow[] = [
+    {
+      id: 'DOC001',
+      projectName: 'Customer Portal',
+      documentName: 'User requirements  specification',
+      dueDate: '2023-10-25',
+      priority: 'High',
+      status: 'Draft'
+    },
+    {
+      id: 'DOC042',
+      projectName: 'LIMS Upgrade',
+      documentName: 'Validation summer Report',
+      dueDate: '2023-11-02',
+      priority: 'Medium',
+      status: 'Submitted'
+    },
+    {
+      id: 'DOC089',
+      projectName: 'Cloud Migration',
+      documentName: 'Risk Assessment  Matrix',
+      dueDate: '2023-09-30',
+      priority: 'High',
+      status: 'Revision required'
+    },
+    {
+      id: 'DOC112',
+      projectName: 'Pharma LIMS',
+      documentName: 'System design Document',
+      dueDate: '2023-11-15',
+      priority: 'Low',
+      status: 'Draft'
+    }
+  ];
+
+  const filteredDocuments = documents.filter(doc =>
+    doc.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    doc.documentName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getPriorityStyles = (priority: string) => {
+    switch (priority) {
+      case 'High':
+        return 'bg-red-100 text-red-700';
+      case 'Medium':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'Low':
+        return 'bg-gray-200 text-gray-600';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getStatusStyles = (status: string) => {
+    switch (status) {
+      case 'Draft':
+        return 'bg-blue-100 text-blue-700';
+      case 'Submitted':
+        return 'bg-orange-100 text-orange-700';
+      case 'Revision required':
+        return 'bg-red-100 text-red-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#DAE0F1]">
+    <div className={`min-h-screen ${darkMode ? "bg-[#DAE0F1]" : "bg-gray-100"}`}>
       {/* Sidebar - Full and Minimal View */}
       <aside
         className={`fixed left-0 top-0 h-screen bg-[#1D2749] transition-all duration-300 z-40 ${
@@ -38,21 +147,47 @@ const AuthorDashboard = () => {
 
         {/* Navigation Links */}
         <nav className={`flex flex-col gap-3 ${sidebarOpen ? "px-7 py-10" : "px-3 py-10"}`}>
-          {dashboards.map((dashboard) => (
-            <a
-              key={dashboard.name}
-              href={dashboard.path}
-              className={`flex items-center gap-3 rounded-lg px-4 py-3 transition ${
-                dashboard.current
-                  ? "bg-[#2d3a5a] text-white"
-                  : "text-white hover:bg-[#2d3a5a]"
-              } ${!sidebarOpen ? "justify-center" : ""}`}
-              title={dashboard.name}
-            >
-              <LayoutDashboard size={24} />
-              {sidebarOpen && <span className="text-sm font-medium">{dashboard.name}</span>}
-            </a>
-          ))}
+          {/* Dashboard */}
+          <a
+            href="#"
+            className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition ${!sidebarOpen ? "justify-center" : ""}`}
+            title="Author Dashboard"
+          >
+            <LayoutDashboard size={24} />
+            {sidebarOpen && <span className="text-sm font-medium">Author Dashboard</span>}
+          </a>
+
+          {/* Projects */}
+          <button
+            onClick={() => setExpandedMenu({ ...expandedMenu, projects: !expandedMenu.projects })}
+            className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`}
+            title="Projects"
+          >
+            <FolderOpen size={20} />
+            {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Projects</span>}
+            {sidebarOpen && (
+              <ChevronDown
+                size={18}
+                className={`transition-transform ${expandedMenu.projects ? "rotate-180" : ""}`}
+              />
+            )}
+          </button>
+
+          {/* Templates */}
+          <button
+            onClick={() => setExpandedMenu({ ...expandedMenu, templates: !expandedMenu.templates })}
+            className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`}
+            title="Templates"
+          >
+            <FileText size={20} />
+            {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Templates</span>}
+            {sidebarOpen && (
+              <ChevronDown
+                size={18}
+                className={`transition-transform ${expandedMenu.templates ? "rotate-180" : ""}`}
+              />
+            )}
+          </button>
         </nav>
 
         {/* Footer - Theme & Logout */}
@@ -95,61 +230,179 @@ const AuthorDashboard = () => {
 
           {/* Right Side Content */}
           <div className="flex items-center gap-4">
+            <div className="w-6 h-6 bg-[#DAE0F1] rounded-full flex items-center justify-center">
+              <Search size={16} className="text-[#3A4E92]" />
+            </div>
             <div className="flex flex-col items-end">
               <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Author</p>
               <p className="text-xs text-gray-300">Content Creator</p>
             </div>
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full border-2 border-[#6D81C5]"></div>
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277]"></div>
           </div>
         </header>
 
         {/* Page Content */}
         <main className="p-8 pt-24">
-          <div className="bg-white rounded-xl shadow-lg p-12">
-            <h1 className="text-4xl font-bold text-[#1D2749] mb-4">Author Dashboard</h1>
-            <p className="text-lg text-gray-600 mb-6">
-              Welcome to the Author Dashboard! This section is under development.
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-br from-blue-100 to-blue-50 rounded-lg p-6 border border-[#6D81C5]">
-                <h3 className="text-xl font-semibold text-[#1D2749] mb-2">Content Management</h3>
-                <p className="text-gray-600">Manage your content and publications</p>
-              </div>
-              
-              <div className="bg-gradient-to-br from-purple-100 to-purple-50 rounded-lg p-6 border border-[#6D81C5]">
-                <h3 className="text-xl font-semibold text-[#1D2749] mb-2">Analytics</h3>
-                <p className="text-gray-600">View your content analytics</p>
-              </div>
-              
-              <div className="bg-gradient-to-br from-green-100 to-green-50 rounded-lg p-6 border border-[#6D81C5]">
-                <h3 className="text-xl font-semibold text-[#1D2749] mb-2">Reviews</h3>
-                <p className="text-gray-600">Check feedback on your work</p>
-              </div>
-            </div>
+        {/* Title Section */}
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
+          <p className="text-gray-600 mt-2">Manage your document authority tasks and deliverables</p>
+        </div>
 
-            <div className="mt-8 p-4 bg-blue-50 border-l-4 border-[#6D81C5] rounded">
-              <p className="text-[#1D2749] font-semibold">Navigation</p>
-              <ul className="mt-3 space-y-2">
-                {dashboards.map((dashboard) => (
-                  <li key={dashboard.name}>
-                    <a
-                      href={dashboard.path}
-                      className={`${
-                        dashboard.current ? "font-bold text-[#6D81C5]" : "text-blue-600 hover:text-blue-800"
-                      }`}
-                    >
-                      → {dashboard.name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+        {/* Status Cards */}
+        <div className="grid grid-cols-4 gap-6 mb-8">
+          {statusCards.map((card, idx) => {
+            const getIcon = (iconType: string) => {
+              const iconProps = { size: 24, style: { color: card.borderColor } };
+              switch (iconType) {
+                case 'clipboard':
+                  return <FileStack {...iconProps} />;
+                case 'clock':
+                  return <Hourglass {...iconProps} />;
+                case 'checkcircle':
+                  return <CheckCircle2 {...iconProps} />;
+                case 'alert':
+                  return <AlertCircle {...iconProps} />;
+                default:
+                  return null;
+              }
+            };
+
+            return (
+              <div
+                key={idx}
+                className="bg-white rounded-lg p-6 border-l-4 shadow-md"
+                style={{ borderColor: card.borderColor }}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div>
+                    {getIcon(card.icon)}
+                  </div>
+                  <span className="text-xs font-bold uppercase tracking-wide text-gray-600">
+                    {card.label}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-4xl font-bold" style={{ color: '#6D81C5' }}>
+                    {card.count}
+                  </span>
+                  {card.subtitle && (
+                    <span className="text-xs text-gray-600">{card.subtitle}</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="rounded-lg p-8 mb-8" style={{ backgroundColor: '#F7F7F7' }}>
+          <h3 className="text-sm font-bold text-gray-900 mb-1">Quick Actions</h3>
+          <p className="text-xs text-gray-600 mb-6">Common authority tasks</p>
+          <div className="flex gap-6">
+            <button
+              className="px-8 py-3 text-white rounded-lg font-semibold text-sm flex items-center gap-2 hover:opacity-90 transition flex-1"
+              style={{ backgroundColor: '#11172B' }}
+            >
+              <Plus size={18} /> Create New Document
+            </button>
+            <button
+              className="px-8 py-3 border-2 rounded-lg font-semibold text-sm flex items-center gap-2 hover:opacity-80 transition flex-1"
+              style={{ borderColor: '#6D81C5', color: '#6D81C5' }}
+            >
+              <Folder size={18} /> Continue Draft
+            </button>
+            <button
+              className="px-8 py-3 border-2 rounded-lg font-semibold text-sm flex items-center gap-2 hover:opacity-80 transition flex-1"
+              style={{ borderColor: '#6D81C5', color: '#6D81C5' }}
+            >
+              <FileText size={18} /> View Templates
+            </button>
+          </div>
+        </div>
+
+        {/* Project Table */}
+        <div className="bg-white rounded-lg shadow-lg">
+          {/* Title and Search Row */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <h3 className="text-2xl font-bold text-gray-900">Project Artifacts/Deliverables</h3>
+            <div
+              className="flex items-center gap-3 rounded-full px-5 py-2 w-80"
+              style={{ backgroundColor: '#DAE0F1' }}
+            >
+              <input
+                type="text"
+                placeholder="Search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="bg-transparent text-sm outline-none flex-1"
+                style={{ color: 'rgba(0, 0, 0, 0.7)' }}
+              />
+              <Search size={18} className="text-gray-600" />
             </div>
           </div>
-        </main>
+
+          {/* Column Headers */}
+          <div
+            className="grid px-8 py-3 text-xs font-bold uppercase tracking-wide text-gray-700"
+            style={{ backgroundColor: '#B8C5E0', gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr 1fr 0.6fr' }}
+          >
+            <div>Document ID</div>
+            <div>Project Name</div>
+            <div>Document Name</div>
+            <div>Due Date</div>
+            <div>Priority</div>
+            <div>Status</div>
+            <div className="text-center">View</div>
+          </div>
+
+          {/* Table Rows */}
+          <div className="divide-y divide-gray-200">
+            {filteredDocuments.map((doc, idx) => (
+              <div
+                key={idx}
+                className="grid px-8 py-4 hover:bg-gray-50 transition items-center"
+                style={{ gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr 1fr 0.6fr' }}
+              >
+                <div className="text-sm font-medium text-gray-700">{doc.id}</div>
+                <div className="text-sm font-semibold text-gray-900">{doc.projectName}</div>
+                <div className="text-sm font-semibold text-gray-900">{doc.documentName}</div>
+                <div className="text-sm text-gray-700">{doc.dueDate}</div>
+                <div>
+                  <span className={`text-xs font-semibold px-3 py-1 rounded-full ${getPriorityStyles(doc.priority)}`}>
+                    {doc.priority}
+                  </span>
+                </div>
+                <div>
+                  <span className={`text-xs font-semibold px-3 py-1 rounded-full ${getStatusStyles(doc.status)}`}>
+                    {doc.status}
+                  </span>
+                </div>
+                <div className="flex justify-center">
+                  <Eye size={20} className="text-gray-600 cursor-pointer hover:text-gray-900 transition" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Table Footer */}
+          <div className="px-8 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-700">
+              Showing {filteredDocuments.length} of {documents.length} active projects
+            </p>
+            <div className="flex gap-3">
+              <button className="w-8 h-8 border border-gray-400 rounded hover:bg-gray-200 text-sm font-semibold transition flex items-center justify-center">
+                ‹
+              </button>
+              <span className="px-3 py-1 text-sm font-medium text-gray-700">1</span>
+              <button className="w-8 h-8 border border-gray-400 rounded hover:bg-gray-200 text-sm font-semibold transition flex items-center justify-center">
+                ›
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
       </div>
     </div>
   );
-};
-
-export default AuthorDashboard;
+}

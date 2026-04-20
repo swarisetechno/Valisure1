@@ -38,6 +38,8 @@ const AddUser = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
+  const [projectRoles, setProjectRoles] = useState<Record<string, string>>({});
+  const [quickAssignRole, setQuickAssignRole] = useState("");
 
   useEffect(() => {
     loadUsers();
@@ -556,10 +558,113 @@ const AddUser = () => {
             </div>
           )}
 
-          {/* Step 3: Assign Roles (Placeholder) */}
+          {/* Step 3: Assign Roles */}
           {currentStep === 3 && (
-            <div className="text-center py-12">
-              <p className="text-gray-600">Assign Roles - Coming Soon</p>
+            <div>
+              <h2 className="text-2xl font-bold text-[#1F1B16] mb-2">Choose Projects</h2>
+              <p className="text-gray-600 text-sm mb-8">
+                Choose a role for {selectedUser?.name || "the user"} in each selected project
+              </p>
+
+              {/* Quick Assign Section */}
+              <div className="bg-white rounded-lg p-6 mb-8 border border-[#E5E5E5]">
+                <h3 className="text-sm font-semibold text-[#1F1B16] mb-1">Quick Assign</h3>
+                <p className="text-xs text-gray-600 mb-4">Apply the same role to all selected projects</p>
+                
+                <div className="flex items-center gap-4">
+                  <select
+                    value={quickAssignRole}
+                    onChange={(e) => setQuickAssignRole(e.target.value)}
+                    className="flex-1 px-4 py-3 bg-[#DAE0F1] border border-[#A9A4A0] rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#6D81C5]"
+                  >
+                    <option value="">Select role for all projects</option>
+                    <option value="Admin">Admin</option>
+                    <option value="Reviewer">Reviewer</option>
+                    <option value="Reviewer - Approver">Reviewer - Approver</option>
+                  </select>
+                  <button
+                    onClick={() => {
+                      if (quickAssignRole) {
+                        const updatedRoles = { ...projectRoles };
+                        selectedProjects.forEach(projectId => {
+                          updatedRoles[projectId] = quickAssignRole;
+                        });
+                        setProjectRoles(updatedRoles);
+                      }
+                    }}
+                    disabled={!quickAssignRole}
+                    className="px-6 py-3 bg-[#6D81C5] text-white rounded-lg hover:bg-[#5a6fb3] transition font-medium disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    Apply to all
+                  </button>
+                </div>
+              </div>
+
+              {/* Role Assignments Section */}
+              <div className="bg-white rounded-lg p-6 border border-[#E5E5E5]">
+                <h3 className="text-sm font-semibold text-[#1F1B16] mb-4">Role Assignments</h3>
+                
+                {/* Projects Role Assignment */}
+                <div className="space-y-3">
+                  {projects
+                    .filter(p => selectedProjects.has(p.id))
+                    .map((project) => (
+                      <div key={project.id} className="border border-[#E5E5E5] rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          {/* Project Name */}
+                          <div>
+                            <p className="text-sm font-semibold text-[#1F1B16]">{project.name}</p>
+                            <p className="text-xs text-gray-500">{project.id}</p>
+                          </div>
+                          
+                          {/* Role Options */}
+                          <div className="flex items-center gap-8">
+                            <button
+                              onClick={() => {
+                                const updatedRoles = { ...projectRoles };
+                                updatedRoles[project.id] = "Admin";
+                                setProjectRoles(updatedRoles);
+                              }}
+                              className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition"
+                            >
+                              {projectRoles[project.id] === "Admin" && <span className="text-lg">•</span>}
+                              {projectRoles[project.id] !== "Admin" && <span className="text-lg text-transparent">•</span>}
+                              <span>Admin</span>
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                const updatedRoles = { ...projectRoles };
+                                updatedRoles[project.id] = "Reviewer";
+                                setProjectRoles(updatedRoles);
+                              }}
+                              className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition"
+                            >
+                              {projectRoles[project.id] === "Reviewer" && <span className="text-lg">•</span>}
+                              {projectRoles[project.id] !== "Reviewer" && <span className="text-lg text-transparent">•</span>}
+                              <span>Reviewer</span>
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                const updatedRoles = { ...projectRoles };
+                                updatedRoles[project.id] = "Reviewer - Approver";
+                                setProjectRoles(updatedRoles);
+                              }}
+                              className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition"
+                            >
+                              {projectRoles[project.id] === "Reviewer - Approver" && <span className="text-lg">•</span>}
+                              {projectRoles[project.id] !== "Reviewer - Approver" && <span className="text-lg text-transparent">•</span>}
+                              <span>Reviewer - Approver</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Navigation Buttons */}
               <div className="flex items-center justify-between mt-8">
                 <button
                   onClick={() => setCurrentStep(2)}
@@ -569,8 +674,16 @@ const AddUser = () => {
                   Back
                 </button>
                 <button
-                  onClick={() => setCurrentStep(4)}
-                  className="flex items-center gap-2 px-8 py-3 bg-[#6D81C5] text-white rounded-lg hover:bg-[#5a6fb3] transition font-medium"
+                  onClick={() => {
+                    const allRolesAssigned = Array.from(selectedProjects).every(
+                      projectId => projectRoles[projectId]
+                    );
+                    if (allRolesAssigned) {
+                      setCurrentStep(4);
+                    }
+                  }}
+                  disabled={!Array.from(selectedProjects).every(projectId => projectRoles[projectId])}
+                  className="flex items-center gap-2 px-8 py-3 bg-[#6D81C5] text-white rounded-lg hover:bg-[#5a6fb3] transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                   <ChevronRight size={18} />
@@ -579,10 +692,93 @@ const AddUser = () => {
             </div>
           )}
 
-          {/* Step 4: Review & Activate (Placeholder) */}
+          {/* Step 4: Review & Activate */}
           {currentStep === 4 && (
-            <div className="text-center py-12">
-              <p className="text-gray-600">Review & Activate - Coming Soon</p>
+            <div>
+              <h2 className="text-2xl font-bold text-[#1F1B16] mb-2">Review & Activate</h2>
+              <p className="text-gray-600 text-sm mb-8">Review the details and confirm user activation</p>
+
+              {/* User Details Section */}
+              <div className="bg-white rounded-lg p-8 mb-6 border border-[#E5E5E5]">
+                <h3 className="text-sm font-semibold text-[#1F1B16] mb-6">User Details</h3>
+                
+                <div className="grid grid-cols-2 gap-8">
+                  {/* Left Column */}
+                  <div className="space-y-6">
+                    {/* Name */}
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-1">Name</p>
+                      <p className="text-sm font-semibold text-[#1F1B16]">{selectedUser?.name || "N/A"}</p>
+                    </div>
+                    
+                    {/* Department */}
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-1">Department</p>
+                      <p className="text-sm font-semibold text-[#1F1B16]">{selectedUser?.department || "N/A"}</p>
+                    </div>
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="space-y-6">
+                    {/* Email */}
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-1">Email</p>
+                      <p className="text-sm font-semibold text-[#1F1B16]">{selectedUser?.email || "N/A"}</p>
+                    </div>
+                    
+                    {/* Status from (IDP) */}
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-1">Status from (IDP)</p>
+                      <span className={`px-3 py-1 rounded text-xs font-semibold inline-block ${
+                        selectedUser?.status === "Active"
+                          ? "bg-[#15803D] text-white"
+                          : "bg-[#837F7C] text-white"
+                      }`}>
+                        {selectedUser?.status || "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Project Assignments Section */}
+              <div className="bg-white rounded-lg p-8 border border-[#E5E5E5]">
+                <h3 className="text-sm font-semibold text-[#1F1B16] mb-6">Project Assignments</h3>
+                
+                {/* Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-[#CFCBC8]">
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-[#504539] uppercase tracking-wider">Project</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-[#504539] uppercase tracking-wider">Project ID</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-[#504539] uppercase tracking-wider">Role</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {projects
+                        .filter(p => selectedProjects.has(p.id))
+                        .map((project) => (
+                          <tr key={project.id} className="border-b border-[#E5E5E5] hover:bg-gray-50 transition">
+                            <td className="px-6 py-4">
+                              <p className="text-sm font-semibold text-[#1F1B16]">{project.name}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-sm text-[#504539]">{project.id}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="px-3 py-1 rounded text-xs font-semibold bg-[#15803D] text-white inline-block">
+                                {projectRoles[project.id] || "N/A"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Navigation Buttons */}
               <div className="flex items-center justify-between mt-8">
                 <button
                   onClick={() => setCurrentStep(3)}
@@ -593,9 +789,9 @@ const AddUser = () => {
                 </button>
                 <button
                   onClick={() => navigate("/manage-user")}
-                  className="flex items-center gap-2 px-8 py-3 bg-[#15803D] text-white rounded-lg hover:bg-[#0f6928] transition font-medium"
+                  className="flex items-center gap-2 px-8 py-3 bg-[#1D2749] text-white rounded-lg hover:bg-[#0a0f1f] transition font-medium"
                 >
-                  Activate
+                  Activate User
                   <CheckCircle2 size={18} />
                 </button>
               </div>
