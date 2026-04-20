@@ -39,44 +39,30 @@ const AdminDashboard = () => {
     }));
   };
 
-  const projects = [
-    {
-      id: "PRJ-2023-001",
-      name: "LIMS Integration Phase 2",
-      updated: "Updated 2h ago",
-      changeId: "CHG-8821",
-      category: "category 5",
-      csvCsa: "CSV",
-      status: "ACTIVE",
-    },
-    {
-      id: "PRJ-2023-021",
-      name: "Quality Audit Portal",
-      updated: "Updated 1d ago",
-      changeId: "CHG-9071",
-      category: "category 4",
-      csvCsa: "CSA",
-      status: "ACTIVE",
-    },
-    {
-      id: "PRJ-2023-231",
-      name: "LIMS Integration Phase 1",
-      updated: "Updated 3d ago",
-      changeId: "CHG-2341",
-      category: "category 7",
-      csvCsa: "CSV",
-      status: "INACTIVE",
-    },
-    {
-      id: "PRJ-2023-451",
-      name: "Cloud Storage Validation",
-      updated: "Updated last week",
-      changeId: "CHG-4561",
-      category: "category 2",
-      csvCsa: "CSA",
-      status: "ACTIVE",
-    },
-  ];
+  // Load projects from localStorage
+  const getProjects = () => {
+    try {
+      const projects = JSON.parse(localStorage.getItem("projects") || "[]");
+      return projects.map(project => ({
+        id: project.id,
+        name: project.name,
+        updated: `Created on ${project.createdDate}`,
+        changeId: project.changeId,
+        category: project.gamp,
+        csvCsa: project.csvCsa,
+        status: project.status,
+        createdBy: project.createdBy || "-",
+        createdDate: project.createdDate || "-",
+        modifiedBy: "-",
+        modifiedDate: "-",
+      }));
+    } catch (error) {
+      console.error("Error loading projects:", error);
+      return [];
+    }
+  };
+
+  const projects = getProjects();
 
   return (
     <div className={`min-h-screen ${darkMode ? "bg-[#DAE0F1]" : "bg-gray-100"}`}>
@@ -259,7 +245,9 @@ const AdminDashboard = () => {
               <p className="text-xs font-bold text-[#504539] tracking-widest uppercase mb-4">
                 Active Projects
               </p>
-              <p className="text-5xl font-semibold text-[#6D81C5]">12</p>
+              <p className="text-5xl font-semibold text-[#6D81C5]">
+                {projects.filter(p => p.status === "ACTIVE").length}
+              </p>
             </div>
 
             {/* Decommissioned Projects Card */}
@@ -267,7 +255,9 @@ const AdminDashboard = () => {
               <p className="text-xs font-bold text-[#504539] tracking-widest uppercase mb-4">
                 Deactive / Decommissioned Projects
               </p>
-              <p className="text-5xl font-semibold text-[#1F1B16]">08</p>
+              <p className="text-5xl font-semibold text-[#1F1B16]">
+                {projects.filter(p => p.status === "INACTIVE").length}
+              </p>
             </div>
 
             {/* Upcoming/Draft Projects Card */}
@@ -275,7 +265,7 @@ const AdminDashboard = () => {
               <p className="text-xs font-bold text-[#504539] tracking-widest uppercase mb-4">
                 Upcoming / Draft Projects
               </p>
-              <p className="text-5xl font-semibold text-[#30628A]">02</p>
+              <p className="text-5xl font-semibold text-[#30628A]">0</p>
             </div>
           </div>
 
@@ -490,7 +480,9 @@ const AdminDashboard = () => {
 
             {/* Pagination */}
             <div className="flex items-center justify-between px-6 py-4 border-t border-gray-300">
-              <p className="text-xs font-semibold text-[#504539]">Showing 4 of 12 active projects</p>
+              <p className="text-xs font-semibold text-[#504539]">
+                Showing {projects.length} of {projects.length} projects
+              </p>
               <div className="flex items-center gap-2">
                 <button className="p-1 border border-gray-300 rounded hover:bg-gray-50 transition">
                   <ChevronLeft size={16} />

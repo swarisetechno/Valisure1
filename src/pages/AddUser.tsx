@@ -13,6 +13,13 @@ interface User {
   createdDate: string;
 }
 
+interface Project {
+  id: string;
+  name: string;
+  csvCsa: string;
+  status: string;
+}
+
 const AddUser = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -29,9 +36,12 @@ const AddUser = () => {
   const [deleteMessage, setDeleteMessage] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadUsers();
+    loadProjects();
   }, []);
 
   const handleLogout = () => {
@@ -45,6 +55,16 @@ const AddUser = () => {
     setUsers(storedUsers);
   };
 
+  const loadProjects = () => {
+    try {
+      const storedProjects = JSON.parse(localStorage.getItem("projects") || "[]");
+      setProjects(storedProjects);
+    } catch (error) {
+      console.error("Error loading projects:", error);
+      setProjects([]);
+    }
+  };
+
   const handleDelete = (id: number) => {
     if (confirm("Are you sure you want to delete this user?")) {
       const updatedUsers = users.filter((user) => user.id !== id);
@@ -53,6 +73,16 @@ const AddUser = () => {
       setDeleteMessage("User deleted successfully!");
       setTimeout(() => setDeleteMessage(""), 3000);
     }
+  };
+
+  const toggleProjectSelection = (projectId: string) => {
+    const newSelected = new Set(selectedProjects);
+    if (newSelected.has(projectId)) {
+      newSelected.delete(projectId);
+    } else {
+      newSelected.add(projectId);
+    }
+    setSelectedProjects(newSelected);
   };
 
   const filteredUsers = users.filter((user) => {
@@ -426,11 +456,89 @@ const AddUser = () => {
 
           {/* Step 2: Choose Projects (Placeholder) */}
           {currentStep === 2 && (
-            <div className="text-center py-12">
-              <p className="text-gray-600">Choose Projects - Coming Soon</p>
-              <div className="flex items-center justify-between mt-8">
+            <div className="bg-white rounded-lg p-8">
+              <h2 className="text-lg font-bold text-gray-900 mb-2">Choose Projects</h2>
+              <p className="text-sm text-gray-600 mb-6">
+                Select one or more projects to assign {selectedUser?.name || "the user"} to
+              </p>
+
+              {/* Search Projects */}
+              <div className="mb-8">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search projects..."
+                    className="w-full px-4 py-3 bg-[#DAE0F1] rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#2B3B6E] pr-10"
+                  />
+                  <Search size={18} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600" />
+                </div>
+              </div>
+
+              {/* Projects Grid */}
+              <div className="space-y-3 mb-8">
+                {projects.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-gray-600 mb-4">No projects found</p>
+                    <p className="text-sm text-gray-500">Create a project first in <strong>Projects → New projects</strong></p>
+                  </div>
+                ) : (
+                  projects.map((project) => (
+                    <div key={project.id} className="flex items-center justify-between p-4 border border-[#A9A4A0] rounded-lg hover:bg-gray-50 transition">
+                      <div className="flex items-center gap-4 flex-1">
+                        <input
+                          type="checkbox"
+                          checked={selectedProjects.has(project.id)}
+                          onChange={() => toggleProjectSelection(project.id)}
+                          className="w-5 h-5 rounded border border-gray-400 cursor-pointer"
+                        />
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900">{project.name}</p>
+                          <p className="text-xs text-gray-600">{project.id}</p>
+                        </div>
+                      </div>
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#15803D] text-white">
+                        {project.status}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Selected Projects Display */}
+              {selectedProjects.size > 0 && (
+                <div className="border-t border-gray-300 pt-6 mb-8">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                    Selected {selectedProjects.size} Projects
+                  </h3>
+                  <div className="space-y-2">
+                    {projects
+                      .filter(p => selectedProjects.has(p.id))
+                      .map((project) => (
+                        <div key={project.id} className="flex items-center justify-between p-3 bg-[#DAE0F1] rounded-lg">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{project.name}</p>
+                            <p className="text-xs text-gray-600">{project.id}</p>
+                          </div>
+                          <button
+                            onClick={() => toggleProjectSelection(project.id)}
+                            className="text-gray-400 hover:text-gray-600 text-lg font-semibold"
+                            title="Remove project"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Buttons */}
+              <div className="flex items-center justify-between">
                 <button
-                  onClick={() => setCurrentStep(1)}
+                  onClick={() => {
+                    setCurrentStep(1);
+                    setSelectedProjects(new Set());
+                  }}
                   className="flex items-center gap-2 px-6 py-3 border border-[#A9A4A0] rounded-lg text-[#1D2749] hover:bg-gray-100 transition font-medium"
                 >
                   <ChevronLeft size={18} />
@@ -438,7 +546,8 @@ const AddUser = () => {
                 </button>
                 <button
                   onClick={() => setCurrentStep(3)}
-                  className="flex items-center gap-2 px-8 py-3 bg-[#6D81C5] text-white rounded-lg hover:bg-[#5a6fb3] transition font-medium"
+                  disabled={selectedProjects.size === 0}
+                  className="flex items-center gap-2 px-8 py-3 bg-[#6D81C5] text-white rounded-lg hover:bg-[#5a6fb3] transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                   <ChevronRight size={18} />

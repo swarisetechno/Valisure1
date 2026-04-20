@@ -1462,13 +1462,33 @@ const CreateProject = () => {
               </button>
               <button
                 onClick={() => {
-                  // Here you can add API call to save the project
-                  console.log("Project Created:", {
-                    projectDetails: formData,
+                  // Save project to localStorage
+                  const projects = JSON.parse(localStorage.getItem("projects") || "[]");
+                  const newProject = {
+                    id: formData.projectId,
+                    name: formData.systemApplicationName || "Untitled Project",
+                    changeId: formData.changeNumber || formData.projectId,
+                    gamp: Object.entries(formData.gampCategories)
+                      .filter(([_, selected]) => selected)
+                      .map(([key, _]) => key)
+                      .join(", ") || "N/A",
+                    csvCsa: Object.entries(formData.selectedMethodologies)
+                      .filter(([_, selected]) => selected)
+                      .map(([key, _]) => key.toUpperCase())
+                      .join(", ") || "N/A",
+                    status: "ACTIVE",
+                    createdBy: localStorage.getItem("userName") || "Admin",
+                    createdDate: new Date().toLocaleDateString(),
+                    description: formData.description,
                     selectedUsers: Array.from(selectedUsers),
                     userRoles,
                     userActions,
-                  });
+                  };
+                  
+                  projects.push(newProject);
+                  localStorage.setItem("projects", JSON.stringify(projects));
+                  
+                  console.log("Project Created:", newProject);
                   navigate("/admin-dashboard");
                 }}
                 className="px-8 py-2 bg-[#11172B] text-white rounded-full hover:bg-[#0D0F1F] font-semibold"
