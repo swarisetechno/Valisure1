@@ -17,6 +17,8 @@ import CreateUser from "./pages/CreateUser.tsx";
 import AddUser from "./pages/AddUser.tsx";
 import ManageUser from "./pages/ManageUser.tsx";
 import EditUser from "./pages/EditUser.tsx";
+import CSATemplate from "./pages/CSATemplate.tsx";
+import CSVTemplate from "./pages/CSVTemplate.tsx";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +43,8 @@ const App = () => (
           <Route path="/add-user" element={<AddUser />} />
           <Route path="/manage-user" element={<ManageUser />} />
           <Route path="/edit-user" element={<EditUser />} />
+          <Route path="/csa-template" element={<CSATemplate />} />
+          <Route path="/csv-template" element={<CSVTemplate />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

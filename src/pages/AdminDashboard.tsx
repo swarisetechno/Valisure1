@@ -136,6 +136,22 @@ const AdminDashboard = () => {
               />
             )}
           </button>
+          {sidebarOpen && expandedMenu.templates && (
+            <div className="flex flex-col gap-2 pl-12 pr-4 py-2">
+              <button 
+                onClick={() => navigate("/csa-template")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                CSA
+              </button>
+              <button 
+                onClick={() => navigate("/csv-template")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                CSV
+              </button>
+            </div>
+          )}
 
           {/* Access Control */}
           <button
