@@ -239,36 +239,39 @@ export default function AuthorDashboard() {
           )}
 
           {/* Artifacts */}
-          <button
-            onClick={() => setExpandedMenu({ ...expandedMenu, artifacts: !expandedMenu.artifacts })}
-            className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`}
-            title="Artifacts"
-            disabled={!selectedProject}
-          >
-            <FileText size={20} />
-            {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Artifacts</span>}
-            {sidebarOpen && (
-              <ChevronDown
-                size={18}
-                className={`transition-transform ${expandedMenu.artifacts ? "rotate-180" : ""}`}
-              />
-            )}
-          </button>
-          {sidebarOpen && expandedMenu.artifacts && selectedProject && (
-            <div className="flex flex-col gap-1 pl-12 pr-2 py-2">
-              {getArtifactsForProject().map((artifact) => (
-                <button
-                  key={artifact.id}
-                  onClick={() => navigate("/project-artifact-overview", { state: { projectData: selectedProject, selectedArtifact: artifact.name } })}
-                  className="flex items-center justify-between text-xs text-gray-300 hover:text-white transition py-2 px-2 rounded hover:bg-[#2d3a5a] text-left"
-                >
-                  <span className="truncate flex-1">{artifact.name}</span>
-                  {!artifact.checked && (
-                    <Plus size={14} className="text-orange-400 flex-shrink-0 ml-2" />
-                  )}
-                </button>
-              ))}
-            </div>
+          {selectedProject && (
+            <>
+              <button
+                onClick={() => setExpandedMenu({ ...expandedMenu, artifacts: !expandedMenu.artifacts })}
+                className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`}
+                title="Artifacts"
+              >
+                <FileText size={20} />
+                {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Artifacts</span>}
+                {sidebarOpen && (
+                  <ChevronDown
+                    size={18}
+                    className={`transition-transform ${expandedMenu.artifacts ? "rotate-180" : ""}`}
+                  />
+                )}
+              </button>
+              {sidebarOpen && expandedMenu.artifacts && (
+                <div className="flex flex-col gap-1 pl-12 pr-2 py-2 max-h-72 overflow-y-auto">
+                  {getArtifactsForProject().map((artifact) => (
+                    <button
+                      key={artifact.id}
+                      onClick={() => navigate("/project-artifact-overview", { state: { projectData: selectedProject, selectedArtifact: artifact.name } })}
+                      className="flex items-center justify-between text-xs text-gray-300 hover:text-white transition py-2 px-2 rounded hover:bg-[#2d3a5a] text-left"
+                    >
+                      <span className="truncate flex-1">{artifact.name}</span>
+                      {!artifact.checked && (
+                        <Plus size={14} className="text-orange-400 flex-shrink-0 ml-2" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </nav>
 

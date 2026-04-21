@@ -15,6 +15,26 @@ export default function ProjectArtifactOverview() {
     return location.state?.selectedArtifact || 'URS - User Request Specification';
   });
   const [activeTab, setActiveTab] = useState('Requirements');
+  const [selectedProject, setSelectedProject] = useState<any>(location.state?.projectData || null);
+
+  // Get projects from localStorage
+  const getProjects = () => {
+    try {
+      const projects = JSON.parse(localStorage.getItem("projects") || "[]");
+      return projects;
+    } catch (error) {
+      console.error("Error loading projects:", error);
+      return [];
+    }
+  };
+
+  const projects = getProjects();
+
+  const getArtifactsForProject = () => {
+    if (!selectedProject) return [];
+    const methodology = selectedProject.csvCsa || selectedProject.methodology;
+    return methodology === 'CSV' ? csvArtifactsList : csaArtifactsList;
+  };
 
   // Get project data from location state
   const csvArtifactsList = [
@@ -158,46 +178,62 @@ export default function ProjectArtifactOverview() {
           </button>
           {sidebarOpen && expandedMenu.projects && (
             <div className="pl-12 pr-2 py-3">
-              <div className="w-full bg-[#2d3a5a] border border-[#6D81C5] text-white rounded-lg px-3 py-2 text-sm">
-                {projectData.name}
-              </div>
+              <select
+                value={selectedProject?.id || ''}
+                onChange={(e) => {
+                  const project = projects.find(p => p.id === e.target.value);
+                  setSelectedProject(project || null);
+                }}
+                className="w-full bg-[#2d3a5a] border border-[#6D81C5] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#91A1D4] transition"
+              >
+                <option value="">Choose project</option>
+                {projects.map((project: any) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 
           {/* Artifacts */}
-          <button
-            onClick={() => setExpandedMenu({ ...expandedMenu, artifacts: !expandedMenu.artifacts })}
-            className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`}
-            title="Artifacts"
-          >
-            <FileText size={20} />
-            {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Artifacts</span>}
-            {sidebarOpen && (
-              <ChevronDown
-                size={18}
-                className={`transition-transform ${expandedMenu.artifacts ? "rotate-180" : ""}`}
-              />
-            )}
-          </button>
-          {sidebarOpen && expandedMenu.artifacts && (
-            <div className="flex flex-col gap-1 pl-12 pr-2 py-2">
-              {projectData.artifacts.map((artifact, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedArtifact(artifact.name)}
-                  className={`flex items-center justify-between text-xs py-2 px-2 rounded transition text-left ${
-                    selectedArtifact === artifact.name
-                      ? 'bg-[#6D81C5] text-white'
-                      : 'text-gray-300 hover:text-white hover:bg-[#2d3a5a]'
-                  }`}
-                >
-                  <span className="truncate flex-1">{artifact.name}</span>
-                  {!artifact.checked && (
-                    <Plus size={14} className="text-orange-400 flex-shrink-0 ml-2" />
-                  )}
-                </button>
-              ))}
-            </div>
+          {selectedProject && (
+            <>
+              <button
+                onClick={() => setExpandedMenu({ ...expandedMenu, artifacts: !expandedMenu.artifacts })}
+                className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`}
+                title="Artifacts"
+              >
+                <FileText size={20} />
+                {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Artifacts</span>}
+                {sidebarOpen && (
+                  <ChevronDown
+                    size={18}
+                    className={`transition-transform ${expandedMenu.artifacts ? "rotate-180" : ""}`}
+                  />
+                )}
+              </button>
+              {sidebarOpen && expandedMenu.artifacts && selectedProject && (
+                <div className="flex flex-col gap-1 pl-12 pr-2 py-2 max-h-72 overflow-y-auto">
+                  {getArtifactsForProject().map((artifact) => (
+                    <button
+                      key={artifact.id}
+                      onClick={() => setSelectedArtifact(artifact.name)}
+                      className={`flex items-center justify-between text-xs py-2 px-2 rounded transition text-left ${
+                        selectedArtifact === artifact.name
+                          ? 'bg-[#6D81C5] text-white'
+                          : 'text-gray-300 hover:text-white hover:bg-[#2d3a5a]'
+                      }`}
+                    >
+                      <span className="truncate flex-1">{artifact.name}</span>
+                      {!artifact.checked && (
+                        <Plus size={14} className="text-orange-400 flex-shrink-0 ml-2" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </nav>
 

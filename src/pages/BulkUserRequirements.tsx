@@ -21,6 +21,9 @@ export default function BulkUserRequirements() {
     selectedTab: 'allow'
   });
 
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+
   const getProjects = () => {
     try {
       const projects = JSON.parse(localStorage.getItem("projects") || "[]");
@@ -32,6 +35,38 @@ export default function BulkUserRequirements() {
   };
 
   const projects = getProjects();
+
+  // Define artifacts based on methodology
+  const csvArtifacts = [
+    { id: 'urs', name: 'URS - User Request Specification', checked: true },
+    { id: 'gxp', name: 'GxP Assessment', checked: true },
+    { id: 'cfr', name: 'CFR Part 11 (ERES) Assessment', checked: true },
+    { id: 'srs', name: 'SRS System risk Assessment', checked: false },
+    { id: 'val-plan', name: 'Validation Plan', checked: false },
+    { id: 'frs', name: 'FRS - Functional Requirements', checked: false },
+    { id: 'frs-risk', name: 'FRS - Functional Risk Assessment', checked: false },
+    { id: 'ds', name: 'DS - Design Specification', checked: false },
+    { id: 'iq', name: 'IQ Test Script', checked: false },
+    { id: 'oq', name: 'OQ Test Script', checked: false },
+    { id: 'pq', name: 'PQ Test Script', checked: false },
+    { id: 'rtm', name: 'RTM - Requirement Traceability', checked: false },
+    { id: 'val-sum', name: 'Validation Summary Report', checked: false },
+  ];
+
+  const csaArtifacts = [
+    { id: 'config-doc', name: 'Configuration Documentation', checked: true },
+    { id: 'test-plan', name: 'Test Plan', checked: true },
+    { id: 'security-assess', name: 'Security Assessment', checked: false },
+    { id: 'risk-assess', name: 'Risk Assessment', checked: false },
+    { id: 'deployment-plan', name: 'Deployment Plan', checked: false },
+    { id: 'user-guide', name: 'User Guide', checked: false },
+  ];
+
+  const getArtifactsForProject = () => {
+    if (!selectedProject) return [];
+    const methodology = selectedProject.csvCsa || selectedProject.methodology;
+    return methodology === 'CSV' ? csvArtifacts : csaArtifacts;
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("userRole");
@@ -92,6 +127,11 @@ export default function BulkUserRequirements() {
           {sidebarOpen && expandedMenu.projects && (
             <div className="pl-12 pr-2 py-3">
               <select
+                value={selectedProject?.id || ''}
+                onChange={(e) => {
+                  const project = projects.find(p => p.id === e.target.value);
+                  setSelectedProject(project || null);
+                }}
                 className="w-full bg-[#2d3a5a] border border-[#6D81C5] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#91A1D4] transition"
               >
                 <option value="">Choose project</option>
@@ -105,20 +145,39 @@ export default function BulkUserRequirements() {
           )}
 
           {/* Artifacts */}
-          <button
-            onClick={() => setExpandedMenu({ ...expandedMenu, artifacts: !expandedMenu.artifacts })}
-            className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`}
-            title="Artifacts"
-          >
-            <FileText size={20} />
-            {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Artifacts</span>}
-            {sidebarOpen && (
-              <ChevronDown
-                size={18}
-                className={`transition-transform ${expandedMenu.artifacts ? "rotate-180" : ""}`}
-              />
-            )}
-          </button>
+          {selectedProject && (
+            <>
+              <button
+                onClick={() => setExpandedMenu({ ...expandedMenu, artifacts: !expandedMenu.artifacts })}
+                className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`}
+                title="Artifacts"
+              >
+                <FileText size={20} />
+                {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Artifacts</span>}
+                {sidebarOpen && (
+                  <ChevronDown
+                    size={18}
+                    className={`transition-transform ${expandedMenu.artifacts ? "rotate-180" : ""}`}
+                  />
+                )}
+              </button>
+              {sidebarOpen && expandedMenu.artifacts && (
+                <div className="flex flex-col gap-1 pl-12 pr-2 py-2 max-h-72 overflow-y-auto">
+                  {getArtifactsForProject().map((artifact) => (
+                    <button
+                      key={artifact.id}
+                      className="flex items-center justify-between text-xs text-gray-300 hover:text-white transition py-2 px-2 rounded hover:bg-[#2d3a5a] text-left"
+                    >
+                      <span className="truncate flex-1">{artifact.name}</span>
+                      {!artifact.checked && (
+                        <Plus size={14} className="text-orange-400 flex-shrink-0 ml-2" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </nav>
 
         {/* Footer - Theme & Logout */}
