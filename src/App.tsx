@@ -9,6 +9,8 @@ import NotFound from "./pages/NotFound.tsx";
 import AdminDashboard from "./pages/AdminDashboard.tsx";
 import CreateProject from "./pages/CreateProject.tsx";
 import AuthorDashboard from "./pages/AuthorDashboard.tsx";
+import ProjectArtifactOverview from "./pages/ProjectArtifactOverview.tsx";
+import BulkUserRequirements from "./pages/BulkUserRequirements.tsx";
 import UserDashboard from "./pages/UserDashboard.tsx";
 import ApprovalDashboard from "./pages/ApprovalDashboard.tsx";
 import CreateUser from "./pages/CreateUser.tsx";
@@ -31,6 +33,8 @@ const App = () => (
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
           <Route path="/create-project" element={<CreateProject />} />
           <Route path="/author-dashboard" element={<AuthorDashboard />} />
+          <Route path="/project-artifact-overview" element={<ProjectArtifactOverview />} />
+          <Route path="/bulk-user-requirements" element={<BulkUserRequirements />} />
           <Route path="/user-dashboard" element={<UserDashboard />} />
           <Route path="/approval-dashboard" element={<ApprovalDashboard />} />
           <Route path="/create-user" element={<CreateUser />} />

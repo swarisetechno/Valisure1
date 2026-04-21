@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, Eye, LogOut, LayoutDashboard, FolderOpen, FileText, Lock, Palette, Search, Moon, Sun, ChevronLeft, ChevronDown, FileStack, Hourglass, CheckCircle2, AlertCircle, Plus, Folder } from 'lucide-react';
+import { ChevronRight, Eye, LogOut, LayoutDashboard, FolderOpen, FileText, Lock, Palette, Search, Moon, Sun, ChevronLeft, ChevronDown, FileStack, Hourglass, CheckCircle2, AlertCircle, Plus, FilePen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface DocumentRow {
@@ -16,11 +16,57 @@ export default function AuthorDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
   const [expandedMenu, setExpandedMenu] = useState({
     dashboard: true,
     projects: false,
-    templates: false,
+    artifacts: false,
   });
+
+  // Get projects from localStorage
+  const getProjects = () => {
+    try {
+      const projects = JSON.parse(localStorage.getItem("projects") || "[]");
+      return projects;
+    } catch (error) {
+      console.error("Error loading projects:", error);
+      return [];
+    }
+  };
+
+  const projects = getProjects();
+
+  // Define artifacts based on methodology
+  const csvArtifacts = [
+    { id: 'urs', name: 'URS - User Request Specification', checked: true },
+    { id: 'gxp', name: 'GxP Assessment', checked: true },
+    { id: 'cfr', name: 'CFR Part 11 (ERES) Assessment', checked: true },
+    { id: 'srs', name: 'SRS System risk Assessment', checked: false },
+    { id: 'val-plan', name: 'Validation Plan', checked: false },
+    { id: 'frs', name: 'FRS - Functional Requirements', checked: false },
+    { id: 'frs-risk', name: 'FRS - Functional Risk Assessment', checked: false },
+    { id: 'ds', name: 'DS - Design Specification', checked: false },
+    { id: 'iq', name: 'IQ Test Script', checked: false },
+    { id: 'oq', name: 'OQ Test Script', checked: false },
+    { id: 'pq', name: 'PQ Test Script', checked: false },
+    { id: 'rtm', name: 'RTM - Requirement Traceability', checked: false },
+    { id: 'val-sum', name: 'Validation Summary Report', checked: false },
+  ];
+
+  const csaArtifacts = [
+    { id: 'config-doc', name: 'Configuration Documentation', checked: true },
+    { id: 'test-plan', name: 'Test Plan', checked: true },
+    { id: 'security-assess', name: 'Security Assessment', checked: false },
+    { id: 'risk-assess', name: 'Risk Assessment', checked: false },
+    { id: 'deployment-plan', name: 'Deployment Plan', checked: false },
+    { id: 'user-guide', name: 'User Guide', checked: false },
+  ];
+
+  const getArtifactsForProject = () => {
+    if (!selectedProject) return [];
+    const methodology = selectedProject.csvCsa || selectedProject.methodology;
+    return methodology === 'CSV' ? csvArtifacts : csaArtifacts;
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("userRole");
@@ -30,7 +76,7 @@ export default function AuthorDashboard() {
 
   const statusCards = [
     {
-      icon: 'clipboard',
+      icon: 'filepen',
       label: 'DRAFTS',
       count: '05',
       borderColor: '#6D81C5',
@@ -172,22 +218,58 @@ export default function AuthorDashboard() {
               />
             )}
           </button>
+          {sidebarOpen && expandedMenu.projects && (
+            <div className="pl-12 pr-2 py-3">
+              <select
+                value={selectedProject?.id || ''}
+                onChange={(e) => {
+                  const project = projects.find(p => p.id === e.target.value);
+                  setSelectedProject(project || null);
+                }}
+                className="w-full bg-[#2d3a5a] border border-[#6D81C5] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#91A1D4] transition"
+              >
+                <option value="">Choose project</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          {/* Templates */}
+          {/* Artifacts */}
           <button
-            onClick={() => setExpandedMenu({ ...expandedMenu, templates: !expandedMenu.templates })}
+            onClick={() => setExpandedMenu({ ...expandedMenu, artifacts: !expandedMenu.artifacts })}
             className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`}
-            title="Templates"
+            title="Artifacts"
+            disabled={!selectedProject}
           >
             <FileText size={20} />
-            {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Templates</span>}
+            {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Artifacts</span>}
             {sidebarOpen && (
               <ChevronDown
                 size={18}
-                className={`transition-transform ${expandedMenu.templates ? "rotate-180" : ""}`}
+                className={`transition-transform ${expandedMenu.artifacts ? "rotate-180" : ""}`}
               />
             )}
           </button>
+          {sidebarOpen && expandedMenu.artifacts && selectedProject && (
+            <div className="flex flex-col gap-1 pl-12 pr-2 py-2">
+              {getArtifactsForProject().map((artifact) => (
+                <button
+                  key={artifact.id}
+                  onClick={() => navigate("/project-artifact-overview", { state: { projectData: selectedProject, selectedArtifact: artifact.name } })}
+                  className="flex items-center justify-between text-xs text-gray-300 hover:text-white transition py-2 px-2 rounded hover:bg-[#2d3a5a] text-left"
+                >
+                  <span className="truncate flex-1">{artifact.name}</span>
+                  {!artifact.checked && (
+                    <Plus size={14} className="text-orange-400 flex-shrink-0 ml-2" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </nav>
 
         {/* Footer - Theme & Logout */}
@@ -255,8 +337,8 @@ export default function AuthorDashboard() {
             const getIcon = (iconType: string) => {
               const iconProps = { size: 24, style: { color: card.borderColor } };
               switch (iconType) {
-                case 'clipboard':
-                  return <FileStack {...iconProps} />;
+                case 'filepen':
+                  return <FilePen {...iconProps} />;
                 case 'clock':
                   return <Hourglass {...iconProps} />;
                 case 'checkcircle':
@@ -310,7 +392,7 @@ export default function AuthorDashboard() {
               className="px-8 py-3 border-2 rounded-lg font-semibold text-sm flex items-center gap-2 hover:opacity-80 transition flex-1"
               style={{ borderColor: '#6D81C5', color: '#6D81C5' }}
             >
-              <Folder size={18} /> Continue Draft
+              <FilePen size={18} /> Continue Draft
             </button>
             <button
               className="px-8 py-3 border-2 rounded-lg font-semibold text-sm flex items-center gap-2 hover:opacity-80 transition flex-1"
