@@ -24,7 +24,9 @@ const CreateProject = () => {
   // Step 2 - Select Users State
   const [userSearch, setUserSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Status");
+  const [statusFilterDropdownOpen, setStatusFilterDropdownOpen] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState("All Departments");
+  const [departmentFilterDropdownOpen, setDepartmentFilterDropdownOpen] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState(new Set());
 
   // Step 3 - Assign Roles State
@@ -73,10 +75,17 @@ const CreateProject = () => {
 
   // Get unique departments
   const getDepartments = (): string[] => {
+    const standardDepts = [
+      "Quality Assurance",
+      "Regulatory Affairs",
+      "IT",
+      "Operations",
+      "Management"
+    ];
     const depts = allUsers
       .filter((u: any) => u.department && typeof u.department === "string")
       .map((u: any) => u.department as string);
-    const uniqueDepts = [...new Set(depts)] as string[];
+    const uniqueDepts = [...new Set([...depts, ...standardDepts])] as string[];
     return ["All Departments", ...uniqueDepts.sort()];
   };
 
@@ -999,17 +1008,51 @@ const CreateProject = () => {
                     Filter by status
                   </label>
                   <div className="relative">
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="w-full px-4 py-3 bg-[#DAE0F1] rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#2B3B6E] appearance-none cursor-pointer pr-10"
+                    <button
+                      onClick={() => setStatusFilterDropdownOpen(!statusFilterDropdownOpen)}
+                      className="w-full px-4 py-3 bg-[#DAE0F1] border border-gray-300 rounded-lg flex items-center justify-between hover:bg-blue-50 text-left"
                       disabled={allUsers.length === 0}
                     >
-                      <option>All Status</option>
-                      <option>Active</option>
-                      <option>Inactive</option>
-                    </select>
-                    <ChevronDown size={18} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 pointer-events-none" />
+                      <span className="text-gray-700">{statusFilter}</span>
+                      <ChevronDown
+                        size={18}
+                        className={`text-gray-600 transition ${statusFilterDropdownOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+
+                    {/* Status Filter Dropdown Menu */}
+                    {statusFilterDropdownOpen && allUsers.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-20 overflow-hidden">
+                        {["All Status", "Active", "Inactive"].map((status) => (
+                          <label
+                            key={status}
+                            className="flex items-center justify-between p-4 border-b border-gray-300 hover:bg-gray-50 cursor-pointer last:border-b-0"
+                          >
+                            <span className="text-sm text-gray-900">{status}</span>
+                            <input
+                              type="radio"
+                              name="status"
+                              checked={statusFilter === status}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setStatusFilter(status);
+                                  setStatusFilterDropdownOpen(false);
+                                }
+                              }}
+                              className="w-5 h-5 cursor-pointer"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Close dropdown when clicking outside */}
+                    {statusFilterDropdownOpen && (
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setStatusFilterDropdownOpen(false)}
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -1019,17 +1062,51 @@ const CreateProject = () => {
                     Department
                   </label>
                   <div className="relative">
-                    <select
-                      value={departmentFilter}
-                      onChange={(e) => setDepartmentFilter(e.target.value)}
-                      className="w-full px-4 py-3 bg-[#DAE0F1] rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#2B3B6E] appearance-none cursor-pointer pr-10"
+                    <button
+                      onClick={() => setDepartmentFilterDropdownOpen(!departmentFilterDropdownOpen)}
+                      className="w-full px-4 py-3 bg-[#DAE0F1] border border-gray-300 rounded-lg flex items-center justify-between hover:bg-blue-50 text-left"
                       disabled={allUsers.length === 0}
                     >
-                      {getDepartments().map((dept: string) => (
-                        <option key={dept}>{dept}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={18} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 pointer-events-none" />
+                      <span className="text-gray-700">{departmentFilter}</span>
+                      <ChevronDown
+                        size={18}
+                        className={`text-gray-600 transition ${departmentFilterDropdownOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+
+                    {/* Department Filter Dropdown Menu */}
+                    {departmentFilterDropdownOpen && allUsers.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-20 overflow-hidden">
+                        {getDepartments().map((dept: string) => (
+                          <label
+                            key={dept}
+                            className="flex items-center justify-between p-4 border-b border-gray-300 hover:bg-gray-50 cursor-pointer last:border-b-0"
+                          >
+                            <span className="text-sm text-gray-900">{dept}</span>
+                            <input
+                              type="radio"
+                              name="department"
+                              checked={departmentFilter === dept}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setDepartmentFilter(dept);
+                                  setDepartmentFilterDropdownOpen(false);
+                                }
+                              }}
+                              className="w-5 h-5 cursor-pointer"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Close dropdown when clicking outside */}
+                    {departmentFilterDropdownOpen && (
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setDepartmentFilterDropdownOpen(false)}
+                      />
+                    )}
                   </div>
                 </div>
               </div>

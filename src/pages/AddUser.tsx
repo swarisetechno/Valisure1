@@ -32,7 +32,9 @@ const AddUser = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("All Departments");
+  const [departmentFilterDropdownOpen, setDepartmentFilterDropdownOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("All Status");
+  const [statusFilterDropdownOpen, setStatusFilterDropdownOpen] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -40,6 +42,7 @@ const AddUser = () => {
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
   const [projectRoles, setProjectRoles] = useState<Record<string, string>>({});
   const [quickAssignRole, setQuickAssignRole] = useState("");
+  const [quickAssignRoleDropdownOpen, setQuickAssignRoleDropdownOpen] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -361,29 +364,100 @@ const AddUser = () => {
                   </div>
 
                   {/* Status Filter */}
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-4 py-3 bg-[#DAE0F1] rounded-lg text-gray-700 text-sm font-medium focus:outline-none w-48"
-                  >
-                    <option value="All Status">All Status</option>
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
+                  <div className="relative w-48">
+                    <button
+                      onClick={() => setStatusFilterDropdownOpen(!statusFilterDropdownOpen)}
+                      className="w-full px-4 py-3 bg-[#DAE0F1] border border-gray-300 rounded-lg flex items-center justify-between hover:bg-blue-50 text-left"
+                    >
+                      <span className="text-gray-700">{statusFilter}</span>
+                      <ChevronDown
+                        size={18}
+                        className={`text-gray-600 transition ${statusFilterDropdownOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+
+                    {/* Status Filter Dropdown Menu */}
+                    {statusFilterDropdownOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-20 overflow-hidden">
+                        {["All Status", "Active", "Inactive"].map((status) => (
+                          <label
+                            key={status}
+                            className="flex items-center justify-between p-4 border-b border-gray-300 hover:bg-gray-50 cursor-pointer last:border-b-0"
+                          >
+                            <span className="text-sm text-gray-900">{status}</span>
+                            <input
+                              type="radio"
+                              name="status"
+                              checked={statusFilter === status}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setStatusFilter(status);
+                                  setStatusFilterDropdownOpen(false);
+                                }
+                              }}
+                              className="w-5 h-5 cursor-pointer"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Close dropdown when clicking outside */}
+                    {statusFilterDropdownOpen && (
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setStatusFilterDropdownOpen(false)}
+                      />
+                    )}
+                  </div>
 
                   {/* Department Filter */}
-                  <select
-                    value={departmentFilter}
-                    onChange={(e) => setDepartmentFilter(e.target.value)}
-                    className="px-4 py-3 bg-[#DAE0F1] rounded-lg text-gray-700 text-sm font-medium focus:outline-none w-48"
-                  >
-                    <option value="All Departments">All Departments</option>
-                    <option value="Quality Assurance">Quality Assurance</option>
-                    <option value="Regulatory Affairs">Regulatory Affairs</option>
-                    <option value="IT">IT</option>
-                    <option value="Operations">Operations</option>
-                    <option value="Management">Management</option>
-                  </select>
+                  <div className="relative w-48">
+                    <button
+                      onClick={() => setDepartmentFilterDropdownOpen(!departmentFilterDropdownOpen)}
+                      className="w-full px-4 py-3 bg-[#DAE0F1] border border-gray-300 rounded-lg flex items-center justify-between hover:bg-blue-50 text-left"
+                    >
+                      <span className="text-gray-700">{departmentFilter}</span>
+                      <ChevronDown
+                        size={18}
+                        className={`text-gray-600 transition ${departmentFilterDropdownOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+
+                    {/* Department Filter Dropdown Menu */}
+                    {departmentFilterDropdownOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-20 overflow-hidden">
+                        {["All Departments", "Quality Assurance", "Regulatory Affairs", "IT", "Operations", "Management"].map((dept) => (
+                          <label
+                            key={dept}
+                            className="flex items-center justify-between p-4 border-b border-gray-300 hover:bg-gray-50 cursor-pointer last:border-b-0"
+                          >
+                            <span className="text-sm text-gray-900">{dept}</span>
+                            <input
+                              type="radio"
+                              name="department"
+                              checked={departmentFilter === dept}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setDepartmentFilter(dept);
+                                  setDepartmentFilterDropdownOpen(false);
+                                }
+                              }}
+                              className="w-5 h-5 cursor-pointer"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Close dropdown when clicking outside */}
+                    {departmentFilterDropdownOpen && (
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setDepartmentFilterDropdownOpen(false)}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -554,26 +628,26 @@ const AddUser = () => {
                   </div>
                 </div>
               )}
+            </div>
 
-              {/* Navigation Buttons - Outside Container */}
-              <div className="flex items-center justify-between mt-8">
-                <button
-                  onClick={() => {
-                    setCurrentStep(1);
-                    setSelectedProjects(new Set());
-                  }}
-                  className="px-6 py-2 text-gray-700 border border-gray-400 rounded-full hover:bg-gray-50 font-semibold"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setCurrentStep(3)}
-                  disabled={selectedProjects.size === 0}
-                  className="px-6 py-2 bg-[#11172B] text-white rounded-full hover:opacity-90 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
+            {/* Navigation Buttons - Outside Container */}
+            <div className="flex items-center justify-between mt-8">
+              <button
+                onClick={() => {
+                  setCurrentStep(1);
+                  setSelectedProjects(new Set());
+                }}
+                className="px-6 py-2 text-gray-700 border border-gray-400 rounded-full hover:bg-gray-50 font-semibold"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setCurrentStep(3)}
+                disabled={selectedProjects.size === 0}
+                className="px-6 py-2 bg-[#11172B] text-white rounded-full hover:opacity-90 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
             </div>
             </div>
           )}
@@ -593,16 +667,52 @@ const AddUser = () => {
                 <p className="text-xs text-gray-600 mb-4">Apply the same role to all selected projects</p>
                 
                 <div className="flex items-center gap-4">
-                  <select
-                    value={quickAssignRole}
-                    onChange={(e) => setQuickAssignRole(e.target.value)}
-                    className="flex-1 px-4 py-3 bg-[#DAE0F1] border border-[#A9A4A0] rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#6D81C5]"
-                  >
-                    <option value="">Select role for all projects</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Reviewer">Reviewer</option>
-                    <option value="Reviewer - Approver">Reviewer - Approver</option>
-                  </select>
+                  <div className="relative flex-1">
+                    <button
+                      onClick={() => setQuickAssignRoleDropdownOpen(!quickAssignRoleDropdownOpen)}
+                      className="w-full px-4 py-3 bg-[#DAE0F1] border border-gray-300 rounded-lg flex items-center justify-between hover:bg-blue-50 text-left"
+                    >
+                      <span className="text-gray-700">{quickAssignRole || "Select role for all projects"}</span>
+                      <ChevronDown
+                        size={18}
+                        className={`text-gray-600 transition ${quickAssignRoleDropdownOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+
+                    {/* Quick Assign Role Dropdown Menu */}
+                    {quickAssignRoleDropdownOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-20 overflow-hidden">
+                        {["Admin", "Reviewer", "Reviewer - Approver"].map((role) => (
+                          <label
+                            key={role}
+                            className="flex items-center justify-between p-4 border-b border-gray-300 hover:bg-gray-50 cursor-pointer last:border-b-0"
+                          >
+                            <span className="text-sm text-gray-900">{role}</span>
+                            <input
+                              type="radio"
+                              name="quickAssignRole"
+                              checked={quickAssignRole === role}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setQuickAssignRole(role);
+                                  setQuickAssignRoleDropdownOpen(false);
+                                }
+                              }}
+                              className="w-5 h-5 cursor-pointer"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Close dropdown when clicking outside */}
+                    {quickAssignRoleDropdownOpen && (
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setQuickAssignRoleDropdownOpen(false)}
+                      />
+                    )}
+                  </div>
                   <button
                     onClick={() => {
                       if (quickAssignRole) {
