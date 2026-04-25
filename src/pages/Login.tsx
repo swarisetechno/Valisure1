@@ -65,10 +65,10 @@ const Login = () => {
         </h1>
         <div className="ml-2 mb-6 flex flex-col gap-[19px] max-w-[510px]">
           <h2 className="text-white font-light text-[48px] leading-[60px] tracking-[-1.2px]">
-            Engineering Innovation, Powering Progress
+            AI Platform
           </h2>
           <p className="text-white/80 font-normal text-[18px] leading-[28px]">
-            Trusted partner for AI, data, and digital product solutions.
+            Automate and simplify the authoring & mangement of CSV and CSA
           </p>
         </div>
       </aside>

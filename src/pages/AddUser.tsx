@@ -143,22 +143,6 @@ const AddUser = () => {
               />
             )}
           </button>
-
-          {/* Projects */}
-          <button
-            onClick={() => setExpandedMenu({ ...expandedMenu, projects: !expandedMenu.projects })}
-            className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`}
-            title="Projects"
-          >
-            <FolderOpen size={20} />
-            {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Projects</span>}
-            {sidebarOpen && (
-              <ChevronDown
-                size={18}
-                className={`transition-transform ${expandedMenu.projects ? "rotate-180" : ""}`}
-              />
-            )}
-          </button>
           {sidebarOpen && expandedMenu.projects && (
             <div className="flex flex-col gap-2 pl-12 pr-4 py-2">
               <button 
@@ -357,12 +341,13 @@ const AddUser = () => {
           {/* Step 1: Select User */}
           {currentStep === 1 && (
             <div className="px-8 pb-12">
-              <div className="bg-white rounded-lg p-8 border border-[#A9A4A0]">
-                <h2 className="text-xl font-bold text-[#1F1B16] mb-2">Select User from Identity Provider</h2>
-                <p className="text-gray-600 text-sm mb-8">Search and select a user from your organization's identity provider</p>
+              {/* Heading outside container */}
+              <h2 className="text-xl font-bold text-[#1F1B16] mb-2">Select User from Identity Provider</h2>
+              <p className="text-gray-600 text-sm mb-8">Search and select a user from your organization's identity provider</p>
 
-                {/* Search and Filters */}
-                <div className="flex items-center gap-4 mb-8">
+              {/* Search and Filters Container */}
+              <div className="bg-white rounded-lg p-6 border border-[#A9A4A0] mb-6">
+                <div className="flex items-center gap-4">
                   {/* Search Bar */}
                   <div className="flex items-center gap-2 bg-[#DAE0F1] rounded-lg px-4 py-3 flex-1">
                     <Search size={18} className="text-[#504539]" />
@@ -403,9 +388,10 @@ const AddUser = () => {
               </div>
 
               {/* Users Table */}
-              <div className="bg-white rounded-lg overflow-hidden border border-gray-300 mb-8">
+              <div className="bg-white rounded-lg overflow-hidden border border-[#A9A4A0] mb-8">
                 {/* Table Headers */}
-                <div className="grid grid-cols-5 gap-8 px-8 py-4 bg-gray-50 border-b border-[#CFCBC8]">
+                <div className="grid grid-cols-6 px-8 py-4 bg-gray-50 border-b border-[#CFCBC8]" style={{gridTemplateColumns: "50px 1.5fr 1.5fr 1fr 1fr 1fr"}}>
+                  <div className="flex items-center"></div>
                   <div className="text-xs font-semibold text-[#504539] uppercase tracking-wider">Name</div>
                   <div className="text-xs font-semibold text-[#504539] uppercase tracking-wider">Email</div>
                   <div className="text-xs font-semibold text-[#504539] uppercase tracking-wider">Department</div>
@@ -419,22 +405,41 @@ const AddUser = () => {
                     {filteredUsers.map((user) => (
                       <div
                         key={user.id}
-                        onClick={() => setSelectedUser(user)}
-                        className={`grid grid-cols-5 gap-8 px-8 py-4 items-center cursor-pointer transition ${
+                        className={`grid grid-cols-6 px-8 py-4 items-center transition ${
                           selectedUser?.id === user.id
                             ? "bg-[#DAE0F1]"
                             : "hover:bg-gray-50"
                         }`}
+                        style={{gridTemplateColumns: "50px 1.5fr 1.5fr 1fr 1fr 1fr"}}
                       >
-                        <div>
+                        {/* Checkbox */}
+                        <div className="flex items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedUser?.id === user.id}
+                            onChange={() => setSelectedUser(selectedUser?.id === user.id ? null : user)}
+                            className="w-5 h-5 rounded-full border-2 border-gray-400 cursor-pointer accent-[#2B3B6E]"
+                          />
+                        </div>
+
+                        {/* Name */}
+                        <div className="pr-4">
                           <p className="text-sm font-semibold text-[#1F1B16]">{user.name}</p>
                           <p className="text-xs text-gray-500">Not yet activated · Will be created on activation</p>
                         </div>
-                        <div className="text-sm text-[#504539]">{user.email}</div>
-                        <div className="text-sm text-[#504539]">{user.department}</div>
-                        <div className="text-sm text-[#504539]">{user.title}</div>
+
+                        {/* Email */}
+                        <div className="text-sm text-[#504539] pr-4">{user.email}</div>
+
+                        {/* Department */}
+                        <div className="text-sm text-[#504539] pr-4">{user.department}</div>
+
+                        {/* Title */}
+                        <div className="text-sm text-[#504539] pr-4">{user.title}</div>
+
+                        {/* Status */}
                         <div>
-                          <span className={`px-3 py-1 rounded text-xs font-semibold ${
+                          <span className={`px-3 py-1 rounded text-xs font-semibold inline-block ${
                             user.status === "Active"
                               ? "bg-[#15803D] text-white"
                               : "bg-[#837F7C] text-white"
