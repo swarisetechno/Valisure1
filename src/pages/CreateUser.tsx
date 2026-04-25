@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, LogOut, Menu, Moon, Sun, LayoutDashboard, FolderOpen, FileText, Lock, Palette, Search, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, Menu, Moon, Sun, LayoutDashboard, FolderOpen, FileText, Lock, Palette, Search, ChevronDown, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const CreateUser = () => {
@@ -122,11 +122,13 @@ const CreateUser = () => {
         }`}
       >
         {/* Sidebar Header */}
-        <div className={`flex items-center border-b border-[#6D81C5] px-5 py-6 ${sidebarOpen ? "justify-between" : "justify-center"}`}>
+        <div className={`flex items-center justify-center border-b border-[#6D81C5] px-5 h-20`}>
           {sidebarOpen && <h1 className="text-white font-bold text-lg">ValiSure</h1>}
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full bg-[#91A1D4] ${!sidebarOpen ? "w-10 h-10" : ""}`}>
-            <span className="text-white font-bold text-sm">VS</span>
-          </div>
+          {!sidebarOpen && (
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full bg-[#91A1D4]`}>
+              <span className="text-white font-bold text-sm">VS</span>
+            </div>
+          )}
         </div>
 
         {/* Navigation Links */}
@@ -156,6 +158,19 @@ const CreateUser = () => {
               />
             )}
           </button>
+          {sidebarOpen && expandedMenu.projects && (
+            <div className="flex flex-col gap-2 pl-12 pr-4 py-2">
+              <button 
+                onClick={() => navigate("/create-project")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                New projects
+              </button>
+              <button className="text-sm text-gray-300 hover:text-white text-left transition">
+                Existing project
+              </button>
+            </div>
+          )}
 
           {/* Templates */}
           <button
@@ -172,6 +187,22 @@ const CreateUser = () => {
               />
             )}
           </button>
+          {sidebarOpen && expandedMenu.templates && (
+            <div className="flex flex-col gap-2 pl-12 pr-4 py-2">
+              <button 
+                onClick={() => navigate("/csa-template")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                CSA
+              </button>
+              <button 
+                onClick={() => navigate("/csv-template")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                CSV
+              </button>
+            </div>
+          )}
 
           {/* Access Control */}
           <button
@@ -252,14 +283,10 @@ const CreateUser = () => {
 
           {/* Right Side Content */}
           <div className="flex items-center gap-4">
-            <div className="w-6 h-6 bg-[#DAE0F1] rounded-full flex items-center justify-center">
-              <Search size={16} className="text-[#3A4E92]" />
+            <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Admin</p>
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277] flex items-center justify-center">
+              <User size={16} className="text-white" />
             </div>
-            <div className="flex flex-col items-end">
-              <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Admin</p>
-              <p className="text-xs text-gray-300">Administrator</p>
-            </div>
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277]"></div>
           </div>
         </header>
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Menu, ChevronLeft, ChevronRight, LayoutDashboard, FolderOpen, FileText, Lock, Palette, Search, Moon, Sun, ChevronDown, LayoutGrid, X } from "lucide-react";
+import { LogOut, Menu, ChevronLeft, ChevronRight, LayoutDashboard, FolderOpen, FileText, Lock, Palette, Search, Moon, Sun, ChevronDown, LayoutGrid, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -206,11 +206,13 @@ const CreateProject = () => {
         }`}
       >
         {/* Sidebar Header */}
-        <div className={`flex items-center border-b border-[#6D81C5] px-5 py-6 ${sidebarOpen ? "justify-between" : "justify-center"}`}>
+        <div className={`flex items-center justify-center border-b border-[#6D81C5] px-5 h-20`}>
           {sidebarOpen && <h1 className="text-white font-bold text-lg">ValiSure</h1>}
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full bg-[#91A1D4] ${!sidebarOpen ? "w-10 h-10" : ""}`}>
-            <span className="text-white font-bold text-sm">VS</span>
-          </div>
+          {!sidebarOpen && (
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full bg-[#91A1D4]`}>
+              <span className="text-white font-bold text-sm">VS</span>
+            </div>
+          )}
         </div>
 
         {/* Navigation Links */}
@@ -242,7 +244,10 @@ const CreateProject = () => {
           </button>
           {sidebarOpen && expandedMenu.projects && (
             <div className="flex flex-col gap-2 pl-12 pr-4 py-2">
-              <button className="text-sm text-gray-300 hover:text-white text-left transition">
+              <button 
+                onClick={() => navigate("/create-project")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
                 New projects
               </button>
               <button className="text-sm text-gray-300 hover:text-white text-left transition">
@@ -266,6 +271,22 @@ const CreateProject = () => {
               />
             )}
           </button>
+          {sidebarOpen && expandedMenu.templates && (
+            <div className="flex flex-col gap-2 pl-12 pr-4 py-2">
+              <button 
+                onClick={() => navigate("/csa-template")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                CSA
+              </button>
+              <button 
+                onClick={() => navigate("/csv-template")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                CSV
+              </button>
+            </div>
+          )}
 
           {/* Access Control */}
           <button
@@ -282,6 +303,28 @@ const CreateProject = () => {
               />
             )}
           </button>
+          {sidebarOpen && expandedMenu.accessControl && (
+            <div className="flex flex-col gap-2 pl-12 pr-4 py-2">
+              <button 
+                onClick={() => navigate("/create-user")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                Create User
+              </button>
+              <button 
+                onClick={() => navigate("/add-user")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                Add User
+              </button>
+              <button 
+                onClick={() => navigate("/manage-user")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                Manage User
+              </button>
+            </div>
+          )}
         </nav>
 
         {/* Footer - Theme & Logout */}
@@ -306,19 +349,9 @@ const CreateProject = () => {
       </aside>
 
       {/* Main Content */}
-      <main 
-        className="transition-all duration-300"
-        style={{
-          marginLeft: sidebarOpen ? "256px" : "96px",
-        }}
-      >
+      <div className={`transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-24"}`}>
         {/* Top Header */}
-        <header 
-          className="bg-[#1D2749] text-white h-20 flex items-center justify-between px-5 lg:px-8 fixed top-0 right-0 z-30 transition-all duration-300"
-          style={{
-            left: sidebarOpen ? "256px" : "96px",
-          }}
-        >
+        <header className={`bg-[#1D2749] text-white h-20 flex items-center justify-between px-5 lg:px-8 fixed lg:absolute top-0 left-0 right-0 z-30 ${sidebarOpen ? "lg:left-64" : "lg:left-24"} transition-all duration-300`}>
           {/* Left Arrow Toggle */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -334,14 +367,10 @@ const CreateProject = () => {
 
           {/* Right Side Content */}
           <div className="flex items-center gap-4">
-            <div className="w-6 h-6 bg-[#DAE0F1] rounded-full flex items-center justify-center">
-              <Search size={16} className="text-[#3A4E92]" />
+            <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Admin</p>
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277] flex items-center justify-center">
+              <User size={16} className="text-white" />
             </div>
-            <div className="flex flex-col items-end">
-              <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Admin</p>
-              <p className="text-xs text-gray-300">Administrator</p>
-            </div>
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277]"></div>
           </div>
         </header>
 
@@ -364,7 +393,7 @@ const CreateProject = () => {
                 {index < 3 && (
                   <div
                     className={`absolute top-6 left-1/2 w-full h-1.5 ${
-                      step < currentStep ? "bg-[#2B3B6E]" : "bg-gray-300"
+                      step < currentStep ? "bg-green-500" : "bg-gray-300"
                     }`}
                     style={{
                       width: "calc(100% - 24px)",
@@ -376,7 +405,9 @@ const CreateProject = () => {
                 {/* Circle */}
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold text-lg z-10 ${
-                    step <= currentStep
+                    step < currentStep
+                      ? "bg-green-500 text-white"
+                      : step === currentStep
                       ? "bg-[#2B3B6E] text-white"
                       : "bg-gray-300 text-gray-600"
                   }`}
@@ -399,7 +430,7 @@ const CreateProject = () => {
         {/* Form Content */}
         {currentStep === 1 && (
           <div className="px-8 pb-12">
-            <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="bg-white rounded-lg p-8 border border-[#A9A4A0]">
               <h2 className="text-2xl font-bold text-gray-900 mb-8">Project Details</h2>
 
               <div className="grid grid-cols-3 gap-6 mb-8">
@@ -919,7 +950,8 @@ const CreateProject = () => {
               </button>
               <button
                 onClick={handleNext}
-                className="px-6 py-2 bg-white text-gray-900 border border-gray-400 rounded-full hover:bg-gray-50 font-semibold"
+                disabled={!formData.projectId || !formData.systemApplicationName || Object.values(formData.selectedMethodologies).every(v => !v)}
+                className="px-6 py-2 bg-[#11172B] text-white border border-[#11172B] rounded-full hover:opacity-90 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
               </button>
@@ -930,7 +962,7 @@ const CreateProject = () => {
         {/* Steps 2-4 Placeholder */}
         {currentStep === 2 && (
           <div className="px-8 pb-12">
-            <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="bg-white rounded-lg p-8 border border-[#A9A4A0]">
               <h2 className="text-2xl font-bold text-gray-900 mb-8">Select User for Projects</h2>
 
               {allUsers.length === 0 && (
@@ -966,16 +998,19 @@ const CreateProject = () => {
                   <label className="block text-xs font-semibold uppercase text-gray-700 mb-2 tracking-wide">
                     Filter by status
                   </label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full px-4 py-3 bg-[#DAE0F1] rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#2B3B6E] appearance-none cursor-pointer"
-                    disabled={allUsers.length === 0}
-                  >
-                    <option>All Status</option>
-                    <option>Active</option>
-                    <option>Inactive</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="w-full px-4 py-3 bg-[#DAE0F1] rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#2B3B6E] appearance-none cursor-pointer pr-10"
+                      disabled={allUsers.length === 0}
+                    >
+                      <option>All Status</option>
+                      <option>Active</option>
+                      <option>Inactive</option>
+                    </select>
+                    <ChevronDown size={18} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 pointer-events-none" />
+                  </div>
                 </div>
 
                 {/* Department Filter */}
@@ -983,16 +1018,19 @@ const CreateProject = () => {
                   <label className="block text-xs font-semibold uppercase text-gray-700 mb-2 tracking-wide">
                     Department
                   </label>
-                  <select
-                    value={departmentFilter}
-                    onChange={(e) => setDepartmentFilter(e.target.value)}
-                    className="w-full px-4 py-3 bg-[#DAE0F1] rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#2B3B6E] appearance-none cursor-pointer"
-                    disabled={allUsers.length === 0}
-                  >
-                    {getDepartments().map((dept: string) => (
-                      <option key={dept}>{dept}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={departmentFilter}
+                      onChange={(e) => setDepartmentFilter(e.target.value)}
+                      className="w-full px-4 py-3 bg-[#DAE0F1] rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#2B3B6E] appearance-none cursor-pointer pr-10"
+                      disabled={allUsers.length === 0}
+                    >
+                      {getDepartments().map((dept: string) => (
+                        <option key={dept}>{dept}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={18} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 pointer-events-none" />
+                  </div>
                 </div>
               </div>
 
@@ -1145,7 +1183,7 @@ const CreateProject = () => {
               </button>
               <button
                 onClick={handleNext}
-                className="px-6 py-2 bg-white text-gray-900 border border-gray-400 rounded-full hover:bg-gray-50 font-semibold disabled:opacity-50"
+                className="px-6 py-2 bg-[#11172B] text-white border border-[#11172B] rounded-full hover:opacity-90 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={selectedUsers.size === 0}
                 title={selectedUsers.size === 0 ? "Please select at least one user" : ""}
               >
@@ -1158,7 +1196,7 @@ const CreateProject = () => {
         {/* Step 3 - Assign Roles */}
         {currentStep === 3 && (
           <div className="px-8 pb-12">
-            <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="bg-white rounded-lg p-8 border border-[#A9A4A0]">
               <h2 className="text-lg font-bold text-gray-900 mb-6">
                 Assign Roles & Actions
               </h2>
@@ -1268,26 +1306,26 @@ const CreateProject = () => {
                     </div>
                   ))}
               </div>
+            </div>
 
-              {/* Navigation Buttons */}
-              <div className="flex justify-between mt-8">
-                <button
-                  onClick={handlePrevious}
-                  className="px-6 py-2 text-gray-700 border border-gray-400 rounded-full hover:bg-gray-50 font-semibold"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={handleNext}
-                  className="px-6 py-2 bg-[#2B3B6E] text-white rounded-full hover:bg-[#1D2749] font-semibold disabled:opacity-50"
-                  disabled={allUsers.some(
-                    (user: any) =>
-                      selectedUsers.has(user.id) && !userRoles[user.id]
-                  )}
-                >
-                  Next
-                </button>
-              </div>
+            {/* Navigation Buttons - Outside Container */}
+            <div className="flex justify-between mt-8">
+              <button
+                onClick={handlePrevious}
+                className="px-6 py-2 text-gray-700 border border-gray-400 rounded-full hover:bg-gray-50 font-semibold"
+              >
+                Previous
+              </button>
+              <button
+                onClick={handleNext}
+                className="px-6 py-2 bg-[#11172B] text-white rounded-full hover:opacity-90 font-semibold disabled:opacity-50"
+                disabled={allUsers.some(
+                  (user: any) =>
+                    selectedUsers.has(user.id) && !userRoles[user.id]
+                )}
+              >
+                Next
+              </button>
             </div>
           </div>
         )}
@@ -1455,9 +1493,8 @@ const CreateProject = () => {
             <div className="flex justify-between mt-8">
               <button
                 onClick={handlePrevious}
-                className="flex items-center gap-2 px-6 py-2 bg-gray-200 text-gray-900 rounded-full hover:bg-gray-300 font-semibold"
+                className="px-6 py-2 text-gray-700 border border-gray-400 rounded-full hover:bg-gray-50 font-semibold"
               >
-                <ChevronLeft size={20} />
                 Previous
               </button>
               <button
@@ -1491,14 +1528,14 @@ const CreateProject = () => {
                   console.log("Project Created:", newProject);
                   navigate("/admin-dashboard");
                 }}
-                className="px-8 py-2 bg-[#11172B] text-white rounded-full hover:bg-[#0D0F1F] font-semibold"
+                className="px-8 py-2 bg-[#11172B] text-white rounded-full hover:opacity-90 font-semibold"
               >
                 Create Project
               </button>
             </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 };

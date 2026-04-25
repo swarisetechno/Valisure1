@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Menu, ChevronLeft, ChevronRight, Edit2, Trash2, LayoutDashboard, FolderOpen, FileText, Lock, Palette, Search, Moon, Sun, LayoutGrid, ChevronDown } from "lucide-react";
+import { LogOut, Menu, ChevronLeft, ChevronRight, Edit2, Trash2, LayoutDashboard, FolderOpen, FileText, Lock, Palette, Search, Moon, Sun, LayoutGrid, ChevronDown, User } from "lucide-react";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -73,11 +73,13 @@ const AdminDashboard = () => {
         }`}
       >
         {/* Sidebar Header */}
-        <div className={`flex items-center border-b border-[#6D81C5] px-5 py-6 ${sidebarOpen ? "justify-between" : "justify-center"}`}>
+        <div className={`flex items-center justify-center border-b border-[#6D81C5] px-5 h-20 ${sidebarOpen ? "" : ""}`}>
           {sidebarOpen && <h1 className="text-white font-bold text-lg">ValiSure</h1>}
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full bg-[#91A1D4] ${!sidebarOpen ? "w-10 h-10" : ""}`}>
-            <span className="text-white font-bold text-sm">VS</span>
-          </div>
+          {!sidebarOpen && (
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full bg-[#91A1D4]`}>
+              <span className="text-white font-bold text-sm">VS</span>
+            </div>
+          )}
         </div>
 
         {/* Navigation Links */}
@@ -232,14 +234,10 @@ const AdminDashboard = () => {
 
           {/* Right Side Content */}
           <div className="flex items-center gap-4">
-            <div className="w-6 h-6 bg-[#DAE0F1] rounded-full flex items-center justify-center">
-              <Search size={16} className="text-[#3A4E92]" />
+            <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Admin</p>
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277] flex items-center justify-center">
+              <User size={16} className="text-white" />
             </div>
-            <div className="flex flex-col items-end">
-              <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Admin</p>
-              <p className="text-xs text-gray-300">Administrator</p>
-            </div>
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277]"></div>
           </div>
         </header>
 

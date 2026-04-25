@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, LogOut, Moon, Sun, LayoutDashboard, FolderOpen, FileText, Lock, Search, Trash2, Edit2, ChevronDown, Briefcase, CheckCircle2, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, Moon, Sun, LayoutDashboard, FolderOpen, FileText, Lock, Search, Trash2, Edit2, ChevronDown, Briefcase, CheckCircle2, Users, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface User {
@@ -107,11 +107,13 @@ const AddUser = () => {
         }`}
       >
         {/* Sidebar Header */}
-        <div className={`flex items-center border-b border-[#6D81C5] px-5 py-6 ${sidebarOpen ? "justify-between" : "justify-center"}`}>
+        <div className={`flex items-center justify-center border-b border-[#6D81C5] px-5 h-20`}>
           {sidebarOpen && <h1 className="text-white font-bold text-lg">ValiSure</h1>}
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full bg-[#91A1D4] ${!sidebarOpen ? "w-10 h-10" : ""}`}>
-            <span className="text-white font-bold text-sm">VS</span>
-          </div>
+          {!sidebarOpen && (
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full bg-[#91A1D4]`}>
+              <span className="text-white font-bold text-sm">VS</span>
+            </div>
+          )}
         </div>
 
         {/* Navigation Links */}
@@ -142,6 +144,35 @@ const AddUser = () => {
             )}
           </button>
 
+          {/* Projects */}
+          <button
+            onClick={() => setExpandedMenu({ ...expandedMenu, projects: !expandedMenu.projects })}
+            className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`}
+            title="Projects"
+          >
+            <FolderOpen size={20} />
+            {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Projects</span>}
+            {sidebarOpen && (
+              <ChevronDown
+                size={18}
+                className={`transition-transform ${expandedMenu.projects ? "rotate-180" : ""}`}
+              />
+            )}
+          </button>
+          {sidebarOpen && expandedMenu.projects && (
+            <div className="flex flex-col gap-2 pl-12 pr-4 py-2">
+              <button 
+                onClick={() => navigate("/create-project")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                New projects
+              </button>
+              <button className="text-sm text-gray-300 hover:text-white text-left transition">
+                Existing project
+              </button>
+            </div>
+          )}
+
           {/* Templates */}
           <button
             onClick={() => setExpandedMenu({ ...expandedMenu, templates: !expandedMenu.templates })}
@@ -157,6 +188,22 @@ const AddUser = () => {
               />
             )}
           </button>
+          {sidebarOpen && expandedMenu.templates && (
+            <div className="flex flex-col gap-2 pl-12 pr-4 py-2">
+              <button 
+                onClick={() => navigate("/csa-template")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                CSA
+              </button>
+              <button 
+                onClick={() => navigate("/csv-template")}
+                className="text-sm text-gray-300 hover:text-white text-left transition"
+              >
+                CSV
+              </button>
+            </div>
+          )}
 
           {/* Access Control */}
           <button
@@ -237,14 +284,10 @@ const AddUser = () => {
 
           {/* Right Side Content */}
           <div className="flex items-center gap-4">
-            <div className="w-6 h-6 bg-[#DAE0F1] rounded-full flex items-center justify-center">
-              <Search size={16} className="text-[#3A4E92]" />
+            <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Admin</p>
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277] flex items-center justify-center">
+              <User size={16} className="text-white" />
             </div>
-            <div className="flex flex-col items-end">
-              <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Admin</p>
-              <p className="text-xs text-gray-300">Administrator</p>
-            </div>
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277]"></div>
           </div>
         </header>
 
@@ -266,82 +309,60 @@ const AddUser = () => {
           </div>
 
           {/* Step Indicator */}
-          <div className="flex items-center justify-center gap-8 mb-12">
-            {/* Step 1: Select User */}
-            <div className="flex flex-col items-center gap-3">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition ${
-                currentStep >= 1 ? "bg-[#6D81C5] text-white" : "bg-gray-200 text-gray-500"
-              }`}>
-                <Users size={24} />
-              </div>
-              <span className={`text-sm font-semibold ${currentStep >= 1 ? "text-[#1F1B16]" : "text-gray-500"}`}>
-                Select User
-              </span>
-            </div>
-
-            {/* Connector Line 1 */}
-            <div className={`w-16 h-1 rounded transition ${
-              currentStep >= 2 ? "bg-[#6D81C5]" : "bg-gray-200"
-            }`}></div>
-
-            {/* Step 2: Choose Projects */}
-            <div className="flex flex-col items-center gap-3">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition ${
-                currentStep >= 2 ? "bg-[#6D81C5] text-white" : "bg-gray-200 text-gray-500"
-              }`}>
-                <Briefcase size={24} />
-              </div>
-              <span className={`text-sm font-semibold ${currentStep >= 2 ? "text-[#1F1B16]" : "text-gray-500"}`}>
-                Choose Projects
-              </span>
-            </div>
-
-            {/* Connector Line 2 */}
-            <div className={`w-16 h-1 rounded transition ${
-              currentStep >= 3 ? "bg-[#6D81C5]" : "bg-gray-200"
-            }`}></div>
-
-            {/* Step 3: Assign Roles */}
-            <div className="flex flex-col items-center gap-3">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition ${
-                currentStep >= 3 ? "bg-[#6D81C5] text-white" : "bg-gray-200 text-gray-500"
-              }`}>
-                <Lock size={24} />
-              </div>
-              <span className={`text-sm font-semibold ${currentStep >= 3 ? "text-[#1F1B16]" : "text-gray-500"}`}>
-                Assign Roles
-              </span>
-            </div>
-
-            {/* Connector Line 3 */}
-            <div className={`w-16 h-1 rounded transition ${
-              currentStep >= 4 ? "bg-[#6D81C5]" : "bg-gray-200"
-            }`}></div>
-
-            {/* Step 4: Review & Activate */}
-            <div className="flex flex-col items-center gap-3">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition ${
-                currentStep >= 4 ? "bg-[#6D81C5] text-white" : "bg-gray-200 text-gray-500"
-              }`}>
-                <CheckCircle2 size={24} />
-              </div>
-              <span className={`text-sm font-semibold ${currentStep >= 4 ? "text-[#1F1B16]" : "text-gray-500"}`}>
-                Review & Activate
-              </span>
+          <div className="mb-12">
+            <div className="flex items-start justify-between px-8 mb-6">
+              {[1, 2, 3, 4].map((step, index) => (
+                <div key={step} className="flex flex-col items-center flex-1 relative">
+                  {/* Connecting Line */}
+                  {index < 3 && (
+                    <div
+                      className={`absolute top-6 left-1/2 w-full h-1.5 ${
+                        step < currentStep ? "bg-green-500" : "bg-gray-300"
+                      }`}
+                      style={{
+                        width: "calc(100% - 24px)",
+                        left: "calc(50% + 24px)",
+                      }}
+                    />
+                  )}
+                  
+                  {/* Circle */}
+                  <div
+                    className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold text-lg z-10 ${
+                      step < currentStep
+                        ? "bg-green-500 text-white"
+                        : step === currentStep
+                        ? "bg-[#2B3B6E] text-white"
+                        : "bg-gray-300 text-gray-600"
+                    }`}
+                  >
+                    {step === 1 && <Users size={24} />}
+                    {step === 2 && <Briefcase size={24} />}
+                    {step === 3 && <Lock size={24} />}
+                    {step === 4 && <CheckCircle2 size={24} />}
+                  </div>
+                  
+                  {/* Label */}
+                  <span className="text-xs font-medium text-gray-600 mt-3 text-center">
+                    {step === 1 && "Select User"}
+                    {step === 2 && "Choose Projects"}
+                    {step === 3 && "Assign Roles"}
+                    {step === 4 && "Review & Activate"}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Step 1: Select User */}
           {currentStep === 1 && (
-            <div>
-              <div className="mb-8">
-                <h2 className="text-xl font-semibold text-[#1F1B16] mb-2">Select User from Identity Provider</h2>
-                <p className="text-gray-600 text-sm">Search and select a user from your organization's identity provider</p>
-              </div>
+            <div className="px-8 pb-12">
+              <div className="bg-white rounded-lg p-8 border border-[#A9A4A0]">
+                <h2 className="text-xl font-bold text-[#1F1B16] mb-2">Select User from Identity Provider</h2>
+                <p className="text-gray-600 text-sm mb-8">Search and select a user from your organization's identity provider</p>
 
-              {/* Search and Filters */}
-              <div className="bg-white rounded-lg p-6 mb-6 border border-[#E5E5E5]">
-                <div className="flex items-center gap-4">
+                {/* Search and Filters */}
+                <div className="flex items-center gap-4 mb-8">
                   {/* Search Bar */}
                   <div className="flex items-center gap-2 bg-[#DAE0F1] rounded-lg px-4 py-3 flex-1">
                     <Search size={18} className="text-[#504539]" />
@@ -382,7 +403,7 @@ const AddUser = () => {
               </div>
 
               {/* Users Table */}
-              <div className="bg-white rounded-lg overflow-hidden border border-[#CFCBC8]">
+              <div className="bg-white rounded-lg overflow-hidden border border-gray-300 mb-8">
                 {/* Table Headers */}
                 <div className="grid grid-cols-5 gap-8 px-8 py-4 bg-gray-50 border-b border-[#CFCBC8]">
                   <div className="text-xs font-semibold text-[#504539] uppercase tracking-wider">Name</div>
@@ -431,34 +452,29 @@ const AddUser = () => {
                 )}
               </div>
 
-              {/* Navigation Buttons */}
+              {/* Navigation Buttons - Outside Container */}
               <div className="flex items-center justify-between mt-8">
                 <button
                   onClick={() => navigate("/manage-user")}
-                  className="flex items-center gap-2 px-6 py-3 border border-[#A9A4A0] rounded-lg text-[#1D2749] hover:bg-gray-100 transition font-medium"
+                  className="px-6 py-2 text-gray-700 border border-gray-400 rounded-full hover:bg-gray-50 font-semibold"
                 >
-                  <ChevronLeft size={18} />
                   Back
                 </button>
                 <button
                   onClick={() => selectedUser && setCurrentStep(2)}
                   disabled={!selectedUser}
-                  className={`flex items-center gap-2 px-8 py-3 rounded-lg text-white transition font-medium ${
-                    selectedUser
-                      ? "bg-[#6D81C5] hover:bg-[#5a6fb3]"
-                      : "bg-gray-300 cursor-not-allowed"
-                  }`}
+                  className={`px-6 py-2 rounded-full text-white transition font-semibold ${selectedUser ? "bg-[#11172B] hover:opacity-90" : "bg-gray-300 cursor-not-allowed disabled:opacity-50"}`}
                 >
                   Next
-                  <ChevronRight size={18} />
                 </button>
               </div>
             </div>
           )}
 
-          {/* Step 2: Choose Projects (Placeholder) */}
+          {/* Step 2: Choose Projects */}
           {currentStep === 2 && (
-            <div className="bg-white rounded-lg p-8">
+            <div className="px-8 pb-12">
+              <div className="bg-white rounded-lg p-8 border border-[#A9A4A0]">
               <h2 className="text-lg font-bold text-gray-900 mb-2">Choose Projects</h2>
               <p className="text-sm text-gray-600 mb-6">
                 Select one or more projects to assign {selectedUser?.name || "the user"} to
@@ -534,34 +550,34 @@ const AddUser = () => {
                 </div>
               )}
 
-              {/* Navigation Buttons */}
-              <div className="flex items-center justify-between">
+              {/* Navigation Buttons - Outside Container */}
+              <div className="flex items-center justify-between mt-8">
                 <button
                   onClick={() => {
                     setCurrentStep(1);
                     setSelectedProjects(new Set());
                   }}
-                  className="flex items-center gap-2 px-6 py-3 border border-[#A9A4A0] rounded-lg text-[#1D2749] hover:bg-gray-100 transition font-medium"
+                  className="px-6 py-2 text-gray-700 border border-gray-400 rounded-full hover:bg-gray-50 font-semibold"
                 >
-                  <ChevronLeft size={18} />
-                  Back
+                  Previous
                 </button>
                 <button
                   onClick={() => setCurrentStep(3)}
                   disabled={selectedProjects.size === 0}
-                  className="flex items-center gap-2 px-8 py-3 bg-[#6D81C5] text-white rounded-lg hover:bg-[#5a6fb3] transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-[#11172B] text-white rounded-full hover:opacity-90 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
-                  <ChevronRight size={18} />
                 </button>
               </div>
+            </div>
             </div>
           )}
 
           {/* Step 3: Assign Roles */}
           {currentStep === 3 && (
-            <div>
-              <h2 className="text-2xl font-bold text-[#1F1B16] mb-2">Choose Projects</h2>
+            <div className="px-8 pb-12">
+              <div className="bg-white rounded-lg p-8 border border-[#A9A4A0]">
+              <h2 className="text-xl font-bold text-[#1F1B16] mb-2">Assign Roles</h2>
               <p className="text-gray-600 text-sm mb-8">
                 Choose a role for {selectedUser?.name || "the user"} in each selected project
               </p>
@@ -663,38 +679,38 @@ const AddUser = () => {
                     ))}
                 </div>
               </div>
+            </div>
 
-              {/* Navigation Buttons */}
-              <div className="flex items-center justify-between mt-8">
-                <button
-                  onClick={() => setCurrentStep(2)}
-                  className="flex items-center gap-2 px-6 py-3 border border-[#A9A4A0] rounded-lg text-[#1D2749] hover:bg-gray-100 transition font-medium"
-                >
-                  <ChevronLeft size={18} />
-                  Back
-                </button>
-                <button
-                  onClick={() => {
-                    const allRolesAssigned = Array.from(selectedProjects).every(
-                      projectId => projectRoles[projectId]
-                    );
-                    if (allRolesAssigned) {
-                      setCurrentStep(4);
-                    }
-                  }}
-                  disabled={!Array.from(selectedProjects).every(projectId => projectRoles[projectId])}
-                  className="flex items-center gap-2 px-8 py-3 bg-[#6D81C5] text-white rounded-lg hover:bg-[#5a6fb3] transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                  <ChevronRight size={18} />
-                </button>
-              </div>
+            {/* Navigation Buttons - Outside Container */}
+            <div className="flex items-center justify-between mt-8">
+              <button
+                onClick={() => setCurrentStep(2)}
+                className="px-6 py-2 text-gray-700 border border-gray-400 rounded-full hover:bg-gray-50 font-semibold"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => {
+                  const allRolesAssigned = Array.from(selectedProjects).every(
+                    projectId => projectRoles[projectId]
+                  );
+                  if (allRolesAssigned) {
+                    setCurrentStep(4);
+                  }
+                }}
+                disabled={!Array.from(selectedProjects).every(projectId => projectRoles[projectId])}
+                className="px-6 py-2 bg-[#11172B] text-white rounded-full hover:opacity-90 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
             </div>
           )}
 
           {/* Step 4: Review & Activate */}
           {currentStep === 4 && (
-            <div>
+            <div className="px-8 pb-12">
+              <div className="bg-white rounded-lg p-8 border border-[#A9A4A0]">
               <h2 className="text-2xl font-bold text-[#1F1B16] mb-2">Review & Activate</h2>
               <p className="text-gray-600 text-sm mb-8">Review the details and confirm user activation</p>
 
@@ -777,24 +793,23 @@ const AddUser = () => {
                   </table>
                 </div>
               </div>
+            </div>
 
-              {/* Navigation Buttons */}
-              <div className="flex items-center justify-between mt-8">
-                <button
-                  onClick={() => setCurrentStep(3)}
-                  className="flex items-center gap-2 px-6 py-3 border border-[#A9A4A0] rounded-lg text-[#1D2749] hover:bg-gray-100 transition font-medium"
-                >
-                  <ChevronLeft size={18} />
-                  Back
-                </button>
-                <button
-                  onClick={() => navigate("/manage-user")}
-                  className="flex items-center gap-2 px-8 py-3 bg-[#1D2749] text-white rounded-lg hover:bg-[#0a0f1f] transition font-medium"
-                >
-                  Activate User
-                  <CheckCircle2 size={18} />
-                </button>
-              </div>
+            {/* Navigation Buttons - Outside Container */}
+            <div className="flex items-center justify-between mt-8">
+              <button
+                onClick={() => setCurrentStep(3)}
+                className="px-6 py-2 text-gray-700 border border-gray-400 rounded-full hover:bg-gray-50 font-semibold"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => navigate("/manage-user")}
+                className="px-6 py-2 bg-[#11172B] text-white rounded-full hover:opacity-90 transition font-semibold"
+              >
+                Activate User
+              </button>
+            </div>
             </div>
           )}
         </main>
