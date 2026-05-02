@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, Plus, Moon, Sun, LogOut, LayoutDashboard, FolderOpen, FileText, Search, Upload, Download, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, Moon, Sun, LogOut, LayoutDashboard, FolderOpen, FileText, Upload, Download, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function BulkUserRequirements() {
@@ -23,6 +23,9 @@ export default function BulkUserRequirements() {
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [versions, setVersions] = useState<Array<{id: number, content: string, timestamp: string}>>([]);
+  const [selectedVersionId, setSelectedVersionId] = useState<number | null>(null);
+  const [showToast, setShowToast] = useState(false);
 
   const getProjects = () => {
     try {
@@ -81,6 +84,47 @@ export default function BulkUserRequirements() {
     }));
   };
 
+  const handleGenerate = () => {
+    if (!formData.ursDescription.trim()) return;
+    
+    // Refine the content from URS-REQUIREMENTS
+    const refinedContent = formData.ursDescription
+      .split('\n')
+      .filter(line => line.trim())
+      .map(line => line.trim())
+      .join('\n\n');
+    
+    // Update enhanced field with refined content
+    setFormData(prev => ({
+      ...prev,
+      ursEnhanced: refinedContent
+    }));
+    
+    // Create new version
+    const newVersion = {
+      id: Date.now(),
+      content: refinedContent,
+      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    };
+    
+    setVersions(prev => [newVersion, ...prev]);
+    setSelectedVersionId(newVersion.id);
+    setShowToast(true);
+    
+    setTimeout(() => setShowToast(false), 3000);
+  };
+
+  const handleVersionClick = (versionId: number) => {
+    setSelectedVersionId(versionId);
+    const selected = versions.find(v => v.id === versionId);
+    if (selected) {
+      setFormData(prev => ({
+        ...prev,
+        ursEnhanced: selected.content
+      }));
+    }
+  };
+
   return (
     <div className={`min-h-screen ${darkMode ? "bg-[#DAE0F1]" : "bg-gray-100"}`}>
       {/* Sidebar - Fixed */}
@@ -90,11 +134,13 @@ export default function BulkUserRequirements() {
         }`}
       >
         {/* Sidebar Header */}
-        <div className={`flex items-center border-b border-[#6D81C5] px-5 py-6 ${sidebarOpen ? "justify-between" : "justify-center"}`}>
+        <div className="flex items-center justify-center border-b border-[#6D81C5] px-5 h-20">
           {sidebarOpen && <h1 className="text-white font-bold text-lg">ValiSure</h1>}
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full bg-[#91A1D4] ${!sidebarOpen ? "w-10 h-10" : ""}`}>
-            <span className="text-white font-bold text-sm">VS</span>
-          </div>
+          {!sidebarOpen && (
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#91A1D4]">
+              <span className="text-white font-bold text-sm">VS</span>
+            </div>
+          )}
         </div>
 
         {/* Navigation Links */}
@@ -204,7 +250,7 @@ export default function BulkUserRequirements() {
       {/* Main Content */}
       <div className={`transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-24"}`}>
         {/* Top Header */}
-        <header className={`bg-[#1D2749] text-white h-20 flex items-center justify-between px-5 lg:px-8 fixed lg:absolute top-0 left-0 right-0 z-30 ${sidebarOpen ? "lg:left-64" : "lg:left-24"} transition-all duration-300`}>
+        <header className={`bg-[#1D2749] text-white h-20 flex items-center justify-between px-5 lg:px-8 fixed lg:absolute top-0 left-0 right-0 z-30 border-b border-[#6D81C5] ${sidebarOpen ? "lg:left-64" : "lg:left-24"} transition-all duration-300`}>
           {/* Left Arrow Toggle */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -214,19 +260,13 @@ export default function BulkUserRequirements() {
             {sidebarOpen ? (
               <ChevronLeft size={16} className="text-[#3A4E92]" />
             ) : (
-              <ChevronLeft size={16} className="text-[#3A4E92]" />
+              <ChevronRight size={16} className="text-[#3A4E92]" />
             )}
           </button>
 
           {/* Right Side Content */}
           <div className="flex items-center gap-4">
-            <div className="w-6 h-6 bg-[#DAE0F1] rounded-full flex items-center justify-center">
-              <Search size={16} className="text-[#3A4E92]" />
-            </div>
-            <div className="flex flex-col items-end">
-              <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Author</p>
-              <p className="text-xs text-gray-300">Bulk Requirements</p>
-            </div>
+            <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Author</p>
             <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277]"></div>
           </div>
         </header>
@@ -234,6 +274,19 @@ export default function BulkUserRequirements() {
         {/* Page Content */}
         <main className="p-8 pt-24">
           <div className="max-w-full">
+            {/* Toast Notification */}
+            {showToast && (
+              <div className="fixed bottom-8 right-8 z-50 flex flex-col justify-center items-center p-2.5 gap-2.5" style={{width: '343px', height: '47px', background: '#F7F7F7', border: '1px solid #CFCBC8', boxShadow: '0px 4px 4px rgba(0, 0, 0, 0.04)', borderRadius: '2px'}}>
+                <div className="flex flex-row items-end p-0 gap-0.5" style={{width: '323px', height: '17px'}}>
+                  <div className="flex flex-col justify-center items-center p-0" style={{width: '16px', height: '16px', background: '#11172B', borderRadius: '999px'}}>
+                    <CheckCircle size={16} className="text-white" />
+                  </div>
+                  <div className="flex flex-row justify-center items-center p-2.5 gap-2.5" style={{width: '179px', height: '17px'}}>
+                    <span className="font-medium" style={{width: '159px', height: '20px', fontSize: '14px', fontWeight: 500, lineHeight: '20px', color: '#000000'}}>New Version Generated</span>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Breadcrumb */}
             <div className="flex items-center gap-3 mb-6 text-gray-600">
               <button onClick={() => navigate(-1)} className="flex items-center gap-2 hover:text-gray-900 transition">
@@ -328,7 +381,7 @@ export default function BulkUserRequirements() {
 
                       {/* Action Buttons */}
                       <div className="flex gap-3 pt-4">
-                        <button className="flex-1 px-6 py-3 bg-gray-400 text-gray-800 rounded-lg font-semibold hover:bg-gray-500 transition">
+                        <button onClick={handleGenerate} className="flex-1 px-6 py-3 bg-gray-400 text-gray-800 rounded-lg font-semibold hover:bg-gray-500 transition">
                           Generate
                         </button>
                         <button className="flex-1 px-6 py-3 bg-[#3A4E92] text-white rounded-lg font-semibold hover:bg-[#2d3a5a] transition">
@@ -343,14 +396,36 @@ export default function BulkUserRequirements() {
                     {/* Right Column - Versions */}
                     <div className="flex-1 flex flex-col gap-3">
                       <div className="flex items-center justify-center px-4 py-2 bg-blue-100 border-2 border-blue-200 rounded-lg">
-                        <span className="text-sm font-semibold text-gray-900">Versions (0)</span>
+                        <span className="text-sm font-semibold text-gray-900">Versions ({versions.length})</span>
                       </div>
-                      <div className="border-2 border-dashed border-blue-400 rounded-lg px-6 py-8 flex items-center justify-center bg-blue-50 h-48">
-                        <div className="text-center">
-                          <p className="text-sm text-gray-600 font-medium">No versions yet</p>
-                          <p className="text-xs text-gray-500">Click rephase to generate versions</p>
+                      {versions.length === 0 ? (
+                        <div className="border-2 border-dashed border-blue-400 rounded-lg px-6 py-8 flex items-center justify-center bg-blue-50 h-48">
+                          <div className="text-center">
+                            <p className="text-sm text-gray-600 font-medium">No versions yet</p>
+                            <p className="text-xs text-gray-500">Click Generate to create versions</p>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className={`flex flex-col gap-3 ${versions.length > 4 ? 'max-h-96 overflow-y-auto' : ''}`}>
+                          {versions.map((version, idx) => (
+                            <button
+                              key={version.id}
+                              onClick={() => handleVersionClick(version.id)}
+                              className={`text-left px-4 py-4 rounded-lg transition border-2 border-dashed ${
+                                idx === versions.length - 1
+                                  ? 'bg-blue-100 border-blue-500'
+                                  : 'bg-white border-gray-300 hover:border-gray-400'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="font-semibold text-gray-900 text-sm">Version {versions.length - idx}</div>
+                                <div className="text-xs text-gray-600">{version.timestamp}</div>
+                              </div>
+                              <div className="text-xs text-gray-700 leading-relaxed">{version.content}</div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
