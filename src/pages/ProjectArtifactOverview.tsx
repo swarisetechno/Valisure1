@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronDown, Plus, Moon, Sun, LogOut, LayoutDashboard, FolderOpen, FileText, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, Moon, Sun, LogOut, LayoutDashboard, FolderOpen, FileText, Search, AlertCircle, X, CheckCircle2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function ProjectArtifactOverview() {
@@ -14,7 +14,7 @@ export default function ProjectArtifactOverview() {
   const [selectedArtifact, setSelectedArtifact] = useState(() => {
     return location.state?.selectedArtifact || 'URS - User Request Specification';
   });
-  const [activeTab, setActiveTab] = useState('Requirements');
+  const [activeTab, setActiveTab] = useState('Overview');
   const [selectedProject, setSelectedProject] = useState<any>(location.state?.projectData || null);
 
   // Get projects from localStorage
@@ -142,11 +142,13 @@ export default function ProjectArtifactOverview() {
         }`}
       >
         {/* Sidebar Header */}
-        <div className={`flex items-center border-b border-[#6D81C5] px-5 py-6 ${sidebarOpen ? "justify-between" : "justify-center"}`}>
+        <div className={`flex items-center justify-center border-b border-[#6D81C5] px-5 h-20`}>
           {sidebarOpen && <h1 className="text-white font-bold text-lg">ValiSure</h1>}
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full bg-[#91A1D4] ${!sidebarOpen ? "w-10 h-10" : ""}`}>
-            <span className="text-white font-bold text-sm">VS</span>
-          </div>
+          {!sidebarOpen && (
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#91A1D4]">
+              <span className="text-white font-bold text-sm">VS</span>
+            </div>
+          )}
         </div>
 
         {/* Navigation Links */}
@@ -261,7 +263,7 @@ export default function ProjectArtifactOverview() {
       {/* Main Content */}
       <div className={`transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-24"}`}>
         {/* Top Header */}
-        <header className={`bg-[#1D2749] text-white h-20 flex items-center justify-between px-5 lg:px-8 fixed lg:absolute top-0 left-0 right-0 z-30 ${sidebarOpen ? "lg:left-64" : "lg:left-24"} transition-all duration-300`}>
+        <header className={`bg-[#1D2749] text-white h-20 flex items-center justify-between px-5 lg:px-8 fixed lg:absolute top-0 left-0 right-0 z-30 border-b border-[#6D81C5] ${sidebarOpen ? "lg:left-64" : "lg:left-24"} transition-all duration-300`}>
           {/* Left Arrow Toggle */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -271,19 +273,13 @@ export default function ProjectArtifactOverview() {
             {sidebarOpen ? (
               <ChevronLeft size={16} className="text-[#3A4E92]" />
             ) : (
-              <ChevronLeft size={16} className="text-[#3A4E92]" />
+              <ChevronRight size={16} className="text-[#3A4E92]" />
             )}
           </button>
 
           {/* Right Side Content */}
           <div className="flex items-center gap-4">
-            <div className="w-6 h-6 bg-[#DAE0F1] rounded-full flex items-center justify-center">
-              <Search size={16} className="text-[#3A4E92]" />
-            </div>
-            <div className="flex flex-col items-end">
-              <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Author</p>
-              <p className="text-xs text-gray-300">Artifact Manager</p>
-            </div>
+            <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Author</p>
             <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277]"></div>
           </div>
         </header>
@@ -297,59 +293,42 @@ export default function ProjectArtifactOverview() {
             </p>
 
             {/* Title */}
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">{selectedArtifact}</h1>
-            <p className="text-gray-600 mb-6">Explore flows after select a project or artifact</p>
+            <h1 className="text-4xl font-bold text-gray-900 mb-8">{selectedArtifact}</h1>
 
             {/* Project Details */}
-            <div className="bg-white rounded-lg p-8 mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-8">Project Details</h2>
-              <div className="grid grid-cols-3 gap-8 mb-8">
+            <div className="bg-white rounded-lg shadow-sm p-8 mb-8 border border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Project Details</h2>
+              <div className="grid grid-cols-3 gap-6">
                 <div>
-                  <p className="text-xs font-semibold text-gray-600 mb-3 tracking-wide">PROJECT ID</p>
-                  <div className="bg-gray-100 rounded px-4 py-3 text-gray-900 font-semibold">
-                    {projectData.projectId}
-                  </div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-2">PROJECT ID</label>
+                  <input type="text" value={projectData.projectId} readOnly className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 font-medium" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-600 mb-3 tracking-wide">CHANGE ID</p>
-                  <div className="bg-gray-100 rounded px-4 py-3 text-gray-900 font-semibold">
-                    {projectData.changeId}
-                  </div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-2">CHANGE ID</label>
+                  <input type="text" value={projectData.changeId} readOnly className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 font-medium" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-600 mb-3 tracking-wide">PROJECT/SYSTEM NAME</p>
-                  <div className="bg-gray-100 rounded px-4 py-3 text-gray-900 font-semibold">
-                    {projectData.systemName}
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-8">
-                <div>
-                  <p className="text-xs font-semibold text-gray-600 mb-3 tracking-wide">GAMP CATEGORY</p>
-                  <div className="bg-gray-100 rounded px-4 py-3 text-gray-900 font-semibold flex items-center justify-between cursor-pointer hover:bg-gray-200 transition">
-                    {projectData.gampCategory}
-                    <ChevronDown size={18} className="text-gray-700" />
-                  </div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-2">PROJECT/SYSTEM NAME</label>
+                  <input type="text" value={projectData.systemName} readOnly className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 font-medium" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-600 mb-3 tracking-wide">METHODOLOGY</p>
-                  <div className="bg-gray-100 rounded px-4 py-3 text-gray-900 font-semibold flex items-center justify-between cursor-pointer hover:bg-gray-200 transition">
-                    {projectData.methodology}
-                    <ChevronDown size={18} className="text-gray-700" />
-                  </div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-2">GAMP CATEGORY</label>
+                  <input type="text" value={projectData.gampCategory} readOnly className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 font-medium" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-600 mb-3 tracking-wide">REGULATORY COVERAGE</p>
-                  <div className="bg-gray-100 rounded px-4 py-3 text-gray-900 font-semibold">
-                    {projectData.regulatoryCoverage}
-                  </div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-2">METHODOLOGY</label>
+                  <input type="text" value={projectData.methodology} readOnly className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 font-medium" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-2">REGULATORY COVERAGE</label>
+                  <input type="text" value={projectData.regulatoryCoverage} readOnly className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 font-medium" />
                 </div>
               </div>
             </div>
 
             {/* Tabs Navigation */}
             <div className="bg-white rounded-lg shadow-sm p-4 mb-8 flex gap-4 items-center justify-start">
-              {['Overview', 'Requirements', 'Assessments', 'Uploads', 'Traceability', 'Review'].map((tab) => (
+              {['Overview', 'User Requirements', 'User Requirement Specification'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -365,7 +344,7 @@ export default function ProjectArtifactOverview() {
             </div>
 
             {/* Tab Content */}
-            {activeTab === 'Requirements' && (
+            {activeTab === 'User Requirements' && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                 {/* Requirements Header */}
                 <div className="px-8 py-6 flex items-center justify-start gap-4 border-b border-gray-200">
@@ -395,15 +374,15 @@ export default function ProjectArtifactOverview() {
                 {/* Requirements Table */}
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-white border-b-2 border-gray-300">
+                    <thead className="bg-white border-b border-gray-300">
                       <tr className="text-sm font-bold text-gray-900">
                         <th className="px-6 py-4 text-left">URS ID</th>
                         <th className="px-6 py-4 text-left">URS Title</th>
                         <th className="px-6 py-4 text-left">URS Description</th>
-                        <th className="px-6 py-4 text-center">GxP (Y/N)</th>
-                        <th className="px-6 py-4 text-center">GxP Risk</th>
-                        <th className="px-6 py-4 text-center">Risk Level</th>
-                        <th className="px-6 py-4 text-center">Testing Approach</th>
+                        <th className="px-6 py-4 text-left">GxP (Y/N)</th>
+                        <th className="px-6 py-4 text-left">GxP Risk</th>
+                        <th className="px-6 py-4 text-left">Risk Level</th>
+                        <th className="px-6 py-4 text-left">Testing Approach</th>
                         <th className="px-6 py-4 text-center">Status</th>
                       </tr>
                     </thead>
@@ -412,22 +391,22 @@ export default function ProjectArtifactOverview() {
                         <tr key={idx} className="hover:bg-gray-50 transition text-sm">
                           <td className="px-6 py-4 text-gray-900 font-semibold">{req.id}</td>
                           <td className="px-6 py-4 text-gray-900 font-semibold">{req.title}</td>
-                          <td className="px-6 py-4 text-gray-600 max-w-xs truncate">{req.description}</td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`px-4 py-2 rounded-full text-sm font-semibold border-2 ${req.gxp === 'Yes' ? 'border-blue-400 text-blue-700 bg-blue-50' : 'border-gray-400 text-gray-700 bg-gray-50'}`}>
+                          <td className="px-6 py-4 text-gray-600">{req.description}</td>
+                          <td className="px-6 py-4 text-left">
+                            <span className={`px-4 py-2 rounded-full text-sm font-semibold border ${req.gxp === 'Yes' ? 'border-blue-300 text-blue-700 bg-blue-50' : 'border-gray-300 text-gray-700 bg-gray-50'}`}>
                               {req.gxp}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`px-4 py-2 rounded-full text-sm font-semibold ${getRiskColor(req.risk)}`}>
+                          <td className="px-6 py-4 text-left">
+                            <span className={`px-4 py-2 rounded-lg text-sm font-semibold ${getRiskColor(req.risk)}`}>
                               {req.risk}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-center text-gray-900 font-semibold">{req.riskLevel}</td>
-                          <td className="px-6 py-4 text-center text-gray-900 font-semibold">{req.testing}</td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`px-4 py-2 rounded-full text-sm font-semibold ${getStatusColor(req.status)}`}>
-                              {req.status}
+                          <td className="px-6 py-4 text-left text-gray-900 font-semibold">{req.riskLevel}</td>
+                          <td className="px-6 py-4 text-left text-gray-900 font-semibold">{req.testing}</td>
+                          <td className="px-6 py-4 text-left">
+                            <span className={`w-full block text-center px-5 py-2 rounded-full text-sm font-semibold text-white ${req.status === 'Approved' ? 'bg-green-600' : 'bg-amber-500'}`}>
+                              {req.status === 'Approved' ? 'Finalized' : 'Draft'}
                             </span>
                           </td>
                         </tr>
@@ -449,46 +428,218 @@ export default function ProjectArtifactOverview() {
             )}
 
             {activeTab === 'Overview' && (
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Artifact Overview</h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-600 mb-1">Artifact Name</p>
-                    <p className="text-gray-900">{selectedArtifact}</p>
+              <div className="space-y-6">
+                {/* Artifact Summary */}
+                <div style={{ background: '#F7F7F7', borderRadius: '4px' }} className="p-6">
+                  <div style={{ marginBottom: '29px' }}>
+                    <span className="block font-semibold text-lg text-gray-900">
+                      Artifact Summary
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-600 mb-1">Project</p>
-                    <p className="text-gray-900">{projectData.name}</p>
+                  
+                  <div className="grid grid-cols-4 gap-0">
+                    {/* PROJECT Column */}
+                    <div style={{ position: 'relative', paddingBottom: '2px' }}>
+                      <div style={{ marginBottom: '4px' }}>
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          PROJECT
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-base text-gray-900">
+                          {projectData.name}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* ARTIFACT Column */}
+                    <div style={{ position: 'relative', paddingBottom: '2px', paddingLeft: '53px' }}>
+                      <div style={{ marginBottom: '4px' }}>
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          ARTIFACT
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-base text-gray-900">
+                          {selectedArtifact.split(' - ')[0]}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* # REQUIREMENTS Column */}
+                    <div style={{ position: 'relative', paddingBottom: '2px', paddingLeft: '26px' }}>
+                      <div style={{ marginBottom: '4px' }}>
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          # REQUIREMENTS
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-base text-gray-900">
+                          72
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* WORKFLOW STATUS Column */}
+                    <div style={{ position: 'relative', paddingBottom: '0px', paddingLeft: '32px' }}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          WORKFLOW STATUS
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', padding: '2px 10px', gap: '10px', width: '89px', height: '22px', background: '#CFCBC8', border: '1px solid #A9A4A0', borderRadius: '12px' }}>
+                        <span className="font-medium text-xs text-gray-700">
+                          Not Started
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-600 mb-1">Description</p>
-                    <p className="text-gray-600">This artifact is part of the {projectData.gampCategory} GAMP category project using {projectData.methodology} methodology.</p>
+                </div>
+
+                {/* Recent Changes, Open Reviews, Quality Gates - 3 Column Layout */}
+                <div className="grid grid-cols-3 gap-6">
+                  {/* Recent Changes */}
+                  <div style={{ background: '#F5F5F5', borderRadius: '6px', padding: '24px 32px' }}>
+                    <div style={{ marginBottom: '32px' }}>
+                      <span className="block font-bold text-2xl text-gray-900">
+                        Recent Changes
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-8">
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span className="font-bold text-lg text-gray-900">
+                            URS-001
+                          </span>
+                          <span style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '4px', padding: '4px 12px' }} className="font-medium text-sm text-blue-600">
+                            Draft
+                          </span>
+                        </div>
+                        <span className="text-sm text-gray-500">
+                          Updated 2h ago by J. Smith
+                        </span>
+                      </div>
+
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span className="font-bold text-lg text-gray-900">
+                            URS-002
+                          </span>
+                          <span style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '4px', padding: '4px 12px' }} className="font-medium text-sm text-amber-600">
+                            In Review
+                          </span>
+                        </div>
+                        <span className="text-sm text-gray-500">
+                          Submitted 1d ago by M. Lee
+                        </span>
+                      </div>
+
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span className="font-bold text-lg text-gray-900">
+                            URS-003
+                          </span>
+                          <span style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '4px', padding: '4px 12px' }} className="font-medium text-sm text-green-600">
+                            Approved
+                          </span>
+                        </div>
+                        <span className="text-sm text-gray-500">
+                          Approved 3d ago by QA
+                        </span>
+                      </div>
+
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span className="font-bold text-lg text-gray-900">
+                            URS-004
+                          </span>
+                          <span style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '4px', padding: '4px 12px' }} className="font-medium text-sm text-green-600">
+                            Approved
+                          </span>
+                        </div>
+                        <span className="text-sm text-gray-500">
+                          Approved 4d ago by QA
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Open Reviews */}
+                  <div style={{ background: '#F7F7F7', borderRadius: '6px', padding: '24px 32px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+                      <span className="block font-bold text-2xl text-gray-900">
+                        Open Reviews
+                      </span>
+                      <button className="text-blue-600 font-semibold text-sm hover:text-blue-700">
+                        View All
+                      </button>
+                    </div>
+                    <div style={{ marginBottom: '20px' }}>
+                      <span className="text-sm text-gray-600">
+                        URS items awaiting approval from QA/CSV.
+                      </span>
+                    </div>
+
+                    <div className="space-y-3 flex flex-col">
+                      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start', padding: '8px 16px', background: '#F3F3F3', border: '1px solid #D1D1D1', borderRadius: '20px', width: 'fit-content' }}>
+                        <span className="text-sm text-gray-700">
+                          R-012 {'>'}' Request
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start', padding: '8px 16px', background: '#F3F3F3', border: '1px solid #D1D1D1', borderRadius: '20px', width: 'fit-content' }}>
+                        <span className="text-sm text-gray-700">
+                          R-013 {'>'}' Request
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start', padding: '8px 16px', background: '#F3F3F3', border: '1px solid #D1D1D1', borderRadius: '20px', width: 'fit-content' }}>
+                        <span className="text-sm text-gray-700">
+                          R-019 {'>'}' Request
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quality Gates */}
+                  <div style={{ background: '#F7F7F7', borderRadius: '6px', padding: '24px 32px' }}>
+                    <div style={{ marginBottom: '24px' }}>
+                      <span className="block font-bold text-2xl text-gray-900">
+                        Quality Gates
+                      </span>
+                    </div>
+
+                    <div className="space-y-5">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <AlertCircle size={24} className="text-red-500 flex-shrink-0" />
+                        <span className="text-sm text-gray-700">
+                          All GxP impacting URS must have risk assessment
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#EF4444', borderRadius: '50%', color: 'white' }}>
+                          <X size={16} />
+                        </div>
+                        <span className="text-sm text-gray-700">
+                          Every URS must trace to ≥1 SRS and ≥1 Test
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <CheckCircle2 size={24} className="text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-gray-700">
+                          Approved baseline required before QC plan
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {activeTab === 'Assessments' && (
+            {activeTab === 'User Requirement Specification' && (
               <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                <p className="text-gray-600">Assessments content will be displayed here.</p>
-              </div>
-            )}
-
-            {activeTab === 'Uploads' && (
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                <p className="text-gray-600">Uploads content will be displayed here.</p>
-              </div>
-            )}
-
-            {activeTab === 'Traceability' && (
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                <p className="text-gray-600">Traceability content will be displayed here.</p>
-              </div>
-            )}
-
-            {activeTab === 'Review' && (
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                <p className="text-gray-600">Review content will be displayed here.</p>
+                <p className="text-gray-600">User Requirement Specification content will be displayed here.</p>
               </div>
             )}
           </div>

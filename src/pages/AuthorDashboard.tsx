@@ -74,40 +74,7 @@ export default function AuthorDashboard() {
     navigate("/");
   };
 
-  const statusCards = [
-    {
-      icon: 'filepen',
-      label: 'DRAFTS',
-      count: '05',
-      borderColor: '#6D81C5',
-      subtitle: '',
-      iconBg: '#30628A'
-    },
-    {
-      icon: 'clock',
-      label: 'PENDING SUBMISSION',
-      count: '03',
-      borderColor: '#FFCC00',
-      subtitle: 'Current',
-      iconBg: '#7F5615'
-    },
-    {
-      icon: 'checkcircle',
-      label: 'COMPLETED',
-      count: '12',
-      borderColor: '#15803D',
-      subtitle: 'Current',
-      iconBg: '#059669'
-    },
-    {
-      icon: 'alert',
-      label: 'NEEDS REVISION',
-      count: '02',
-      borderColor: '#A71C1F',
-      subtitle: '',
-      iconBg: '#BA1A1A'
-    }
-  ];
+  const activeProjectsCount = projects.length || 0;
 
   const documents: DocumentRow[] = [
     {
@@ -184,11 +151,13 @@ export default function AuthorDashboard() {
         }`}
       >
         {/* Sidebar Header */}
-        <div className={`flex items-center border-b border-[#6D81C5] px-5 py-6 ${sidebarOpen ? "justify-between" : "justify-center"}`}>
+        <div className={`flex items-center justify-center border-b border-[#6D81C5] px-5 h-20`}>
           {sidebarOpen && <h1 className="text-white font-bold text-lg">ValiSure</h1>}
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full bg-[#91A1D4] ${!sidebarOpen ? "w-10 h-10" : ""}`}>
-            <span className="text-white font-bold text-sm">VS</span>
-          </div>
+          {!sidebarOpen && (
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full bg-[#91A1D4]`}>
+              <span className="text-white font-bold text-sm">VS</span>
+            </div>
+          )}
         </div>
 
         {/* Navigation Links */}
@@ -315,13 +284,7 @@ export default function AuthorDashboard() {
 
           {/* Right Side Content */}
           <div className="flex items-center gap-4">
-            <div className="w-6 h-6 bg-[#DAE0F1] rounded-full flex items-center justify-center">
-              <Search size={16} className="text-[#3A4E92]" />
-            </div>
-            <div className="flex flex-col items-end">
-              <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Author</p>
-              <p className="text-xs text-gray-300">Content Creator</p>
-            </div>
+            <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Author</p>
             <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277]"></div>
           </div>
         </header>
@@ -330,81 +293,77 @@ export default function AuthorDashboard() {
         <main className="p-8 pt-24">
         {/* Title Section */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
-          <p className="text-gray-600 mt-2">Manage your document authority tasks and deliverables</p>
+          <h2 className="text-3xl font-bold text-gray-900"> Author Dashboard</h2>
         </div>
 
-        {/* Status Cards */}
-        <div className="grid grid-cols-4 gap-6 mb-8">
-          {statusCards.map((card, idx) => {
-            const getIcon = (iconType: string) => {
-              const iconProps = { size: 24, style: { color: card.borderColor } };
-              switch (iconType) {
-                case 'filepen':
-                  return <FilePen {...iconProps} />;
-                case 'clock':
-                  return <Hourglass {...iconProps} />;
-                case 'checkcircle':
-                  return <CheckCircle2 {...iconProps} />;
-                case 'alert':
-                  return <AlertCircle {...iconProps} />;
-                default:
-                  return null;
-              }
-            };
+        {/* Active Projects Card */}
+        <div className="mb-8">
+          <div style={{
+            boxSizing: 'border-box',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            padding: '24px',
+            gap: '21px',
+            width: '298px',
+            height: '152px',
+            background: '#FDFDFD',
+            border: '1px solid #3A4E92',
+            boxShadow: '0px 20px 40px rgba(31, 27, 22, 0.06)',
+            borderRadius: '12px'
+          }}>
+            {/* Label */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              padding: '0px',
+              width: '250px',
+              height: '16px'
+            }}>
+              <span style={{
+                width: '129px',
+                height: '16px',
+                fontWeight: '700',
+                fontSize: '12px',
+                lineHeight: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                letterSpacing: '1.2px',
+                textTransform: 'uppercase',
+                color: '#504539'
+              }}>
+                Active Projects
+              </span>
+            </div>
 
-            return (
-              <div
-                key={idx}
-                className="bg-white rounded-lg p-6 border-l-4 shadow-md"
-                style={{ borderColor: card.borderColor }}
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <div>
-                    {getIcon(card.icon)}
-                  </div>
-                  <span className="text-xs font-bold uppercase tracking-wide text-gray-600">
-                    {card.label}
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-3">
-                  <span className="text-4xl font-bold" style={{ color: '#6D81C5' }}>
-                    {card.count}
-                  </span>
-                  {card.subtitle && (
-                    <span className="text-xs text-gray-600">{card.subtitle}</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Quick Actions */}
-        <div className="rounded-lg p-8 mb-8" style={{ backgroundColor: '#F7F7F7' }}>
-          <h3 className="text-sm font-bold text-gray-900 mb-1">Quick Actions</h3>
-          <p className="text-xs text-gray-600 mb-6">Common authority tasks</p>
-          <div className="flex gap-6">
-            <button
-              className="px-8 py-3 text-white rounded-lg font-semibold text-sm flex items-center gap-2 hover:opacity-90 transition flex-1"
-              style={{ backgroundColor: '#11172B' }}
-            >
-              <Plus size={18} /> Create New Document
-            </button>
-            <button
-              className="px-8 py-3 border-2 rounded-lg font-semibold text-sm flex items-center gap-2 hover:opacity-80 transition flex-1"
-              style={{ borderColor: '#6D81C5', color: '#6D81C5' }}
-            >
-              <FilePen size={18} /> Continue Draft
-            </button>
-            <button
-              className="px-8 py-3 border-2 rounded-lg font-semibold text-sm flex items-center gap-2 hover:opacity-80 transition flex-1"
-              style={{ borderColor: '#6D81C5', color: '#6D81C5' }}
-            >
-              <FileText size={18} /> View Templates
-            </button>
+            {/* Number */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'baseline',
+              padding: '0px',
+              gap: '8px',
+              width: '250px',
+              height: '40px'
+            }}>
+              <span style={{
+                width: '48px',
+                height: '40px',
+                fontWeight: '600',
+                fontSize: '36px',
+                lineHeight: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                color: '#6D81C5'
+              }}>
+                {String(activeProjectsCount).padStart(2, '0')}
+              </span>
+            </div>
           </div>
         </div>
+
+
 
         {/* Project Table */}
         <div className="bg-white rounded-lg shadow-lg">
