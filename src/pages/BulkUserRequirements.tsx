@@ -84,15 +84,22 @@ export default function BulkUserRequirements() {
     }));
   };
 
+  const refineContent = (text: string) => {
+    // Clean and capitalize the input
+    const cleanText = text.trim();
+    const capitalizedText = cleanText.charAt(0).toUpperCase() + cleanText.slice(1).toLowerCase();
+    
+    // Add formal requirement language
+    const refined = `The system shall provide ${capitalizedText} with full traceability and audit trail capabilities to ensure regulatory compliance.`;
+    
+    return refined;
+  };
+
   const handleGenerate = () => {
     if (!formData.ursDescription.trim()) return;
     
     // Refine the content from URS-REQUIREMENTS
-    const refinedContent = formData.ursDescription
-      .split('\n')
-      .filter(line => line.trim())
-      .map(line => line.trim())
-      .join('\n\n');
+    const refinedContent = refineContent(formData.ursDescription);
     
     // Update enhanced field with refined content
     setFormData(prev => ({
