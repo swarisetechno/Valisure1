@@ -9,6 +9,8 @@ lerna-debug.log*
 bun-debug.log*
 
 node_modules
+venv/
+backend/venv/
 dist
 dist-ssr
 *.local
