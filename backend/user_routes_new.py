@@ -59,8 +59,14 @@ def create_user_router(get_db):
 
             # Generate JWT token
             access_token_expires = timedelta(minutes=1440)  # 24 hours
+            
+            # Determine role name for token
+            token_role = "user"
+            if user.role:
+                token_role = user.role.name
+                
             access_token = create_access_token(
-                data={"sub": user.id},
+                data={"sub": user.id, "role": token_role},
                 expires_delta=access_token_expires
             )
 
