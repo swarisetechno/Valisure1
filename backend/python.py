@@ -586,6 +586,52 @@ def add_entry_db(db: Session, document_id: int, heading: str, content: str):
     db.refresh(entry)
     return entry.id
 
+
+# -------------------- TEMPLATE MANAGEMENT --------------------
+
+TEMPLATES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "templates"))
+
+from fastapi import UploadFile, Form as FastAPIForm
+
+@app.post("/templates/upload")
+async def upload_template(
+    file: UploadFile,
+    template_name: str = FastAPIForm(...),
+    category: str = FastAPIForm(...),
+    current_user: UserModel = Depends(get_current_user),
+):
+    """
+    Upload (add or replace) a .docx template file into the backend templates/ directory.
+    The file is saved as '<template_name>.docx' so the /create route can pick it up.
+    """
+    if not (file.filename or "").endswith(".docx"):
+        raise HTTPException(400, "Only .docx files are accepted")
+
+    safe_name = template_name.strip().replace("/", "-").replace("\\", "-")
+    dest_filename = safe_name if safe_name.endswith(".docx") else f"{safe_name}.docx"
+    dest_path = os.path.join(TEMPLATES_DIR, dest_filename)
+
+    try:
+        os.makedirs(TEMPLATES_DIR, exist_ok=True)
+        contents = await file.read()
+        with open(dest_path, "wb") as f_out:
+            f_out.write(contents)
+        print(f"[templates/upload] Saved '{dest_filename}' ({len(contents)} bytes) by {current_user.username} [category={category}]")
+        return {"message": f"Template '{safe_name}' saved successfully", "filename": dest_filename, "category": category}
+    except Exception as e:
+        raise HTTPException(500, f"Failed to save template: {str(e)}")
+
+@app.get("/templates/list")
+def list_templates(
+    current_user: UserModel = Depends(get_current_user),
+):
+    """List available .docx template filenames in the templates directory."""
+    try:
+        files = sorted([f[:-5] for f in os.listdir(TEMPLATES_DIR) if f.endswith(".docx")])
+        return {"templates": files}
+    except Exception as e:
+        raise HTTPException(500, f"Failed to list templates: {str(e)}")
+
 # -------------------- ROUTES --------------------
 @app.post("/create")
 def create_file(
@@ -618,10 +664,30 @@ def create_file(
             
             if os.path.exists(template_path):
                 shutil.copy(template_path, path)
-                debug_log += "Copied template!\n"
+                debug_log += "Copied template locally!\n"
             else:
-                debug_log += "Did not copy template because it doesn't exist.\n"
-        
+                debug_log += "Local template not found.\n"
+
+            # ── Google Drive: Copy template to project folder ─────────────────
+            try:
+                from google_drive_service import copy_template_to_project
+                from models import ProjectDetailsModel
+                proj_details = db.query(ProjectDetailsModel).filter_by(project_id=project_id).first()
+                drive_folder_id = proj_details.drive_folder_id if proj_details else None
+
+                if drive_folder_id:
+                    drive_file_id = copy_template_to_project(template_filename, drive_folder_id)
+                    if drive_file_id:
+                        debug_log += f"Drive copy ID: {drive_file_id}\n"
+                    else:
+                        debug_log += "Drive: template not found in ValiSure_Templates — skipped.\n"
+                else:
+                    debug_log += "Drive: no drive_folder_id for this project — skipped.\n"
+            except Exception as drive_err:
+                debug_log += f"Drive copy failed (non-fatal): {drive_err}\n"
+                print(f"[create] Drive copy failed (non-fatal): {drive_err}")
+            # ─────────────────────────────────────────────────────────────────
+
         with open(os.path.join(BASE_PATH, "debug.txt"), "a") as f:
             f.write(debug_log + "\n")
                 
@@ -636,8 +702,10 @@ def create_file(
         
         return {"message": "Document created/opened"}
     except Exception as e:
-        print(f"Error creating document: {str(e)}")
+        print(f"Error creating document: {str(e)}") 
         raise HTTPException(500, f"Error creating document: {str(e)}")
+
+
 
 @app.post("/add-under")
 def add_under(
@@ -712,6 +780,29 @@ def add_under(
 
     doc = get_or_create_document(db, current_user, req.filename, project_id)
     entry_id = add_entry_db(db, doc.id, req.heading_text, req.new_text)
+
+    # ── Sync updated .docx back to Google Drive ───────────────────────────────
+    try:
+        from google_drive_service import sync_document_to_drive
+        from models import ProjectDetailsModel
+        proj_details = db.query(ProjectDetailsModel).filter_by(project_id=project_id).first()
+        drive_folder_id = proj_details.drive_folder_id if proj_details else None
+        if drive_folder_id:
+            # Normalize filename — MUST match the name used when template was copied in /create
+            doc_filename = req.filename if req.filename.endswith(".docx") else req.filename + ".docx"
+            fn_upper = doc_filename.upper()
+
+            # Same normalization as /create: any URS variant → canonical name
+            if "URS" in fn_upper and ("USER REQ" in fn_upper or "USER REQUEST" in fn_upper):
+                doc_filename = "URS - User Requirements Specification.docx"
+
+            sync_document_to_drive(path, doc_filename, drive_folder_id)
+        else:
+            print(f"[add-under] No drive_folder_id for project {project_id} — Drive sync skipped.")
+    except Exception as drive_err:
+        print(f"[add-under] Drive sync failed (non-fatal): {drive_err}")
+    # ─────────────────────────────────────────────────────────────────────────
+
     return {"message": "Added under heading", "entry_id": entry_id}
 
 
@@ -896,16 +987,29 @@ def create_project(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    """Create a new project with full metadata and team assignments"""
+    """Create a new project with full metadata, team assignments, and Google Drive folder."""
     from models import ProjectDetailsModel
 
     try:
         # 1. Create main project
         new_project = ProjectModel(name=req.name, description=req.description)
         db.add(new_project)
-        db.flush() # Get the new_project.id
+        db.flush()  # Get the new_project.id
 
-        # 2. Add detailed project metadata (1-to-1 relationship)
+        # 2. ── Create Google Drive project folder ─────────────────────────────
+        drive_folder_id = None
+        try:
+            from google_drive_service import create_project_folder
+            drive_folder_id = create_project_folder(req.name)
+            if drive_folder_id:
+                print(f"[create_project] Drive folder created for '{req.name}': {drive_folder_id}")
+            else:
+                print(f"[create_project] Drive folder creation skipped for '{req.name}'")
+        except Exception as drive_err:
+            # Drive errors are non-fatal — project still gets created in DB
+            print(f"[create_project] Drive folder creation failed (non-fatal): {drive_err}")
+
+        # 3. Add detailed project metadata
         project_details = ProjectDetailsModel(
             project_id=new_project.id,
             change_number=req.change_number,
@@ -914,11 +1018,12 @@ def create_project(
             gamp_categories=req.gamp_categories,
             regulations=req.regulations,
             csv_deliverables=req.csv_deliverables,
-            csa_deliverables=req.csa_deliverables
+            csa_deliverables=req.csa_deliverables,
+            drive_folder_id=drive_folder_id,  # Store Drive folder ID
         )
         db.add(project_details)
 
-        # 3. Handle team member assignments
+        # 4. Handle team member assignments
         if req.team_members:
             for member in req.team_members:
                 assignment = UserProjectRoleModel(
@@ -927,28 +1032,30 @@ def create_project(
                     role_id=member.role_id
                 )
                 db.add(assignment)
-        
-        # 4. Mandatory auto-assign creator as Admin if they aren't in the list
+
+        # 5. Auto-assign creator as Admin if not already in the list
         already_assigned = any(m.user_id == current_user.id for m in (req.team_members or []))
         if not already_assigned:
             creator_assignment = UserProjectRoleModel(
                 user_id=current_user.id,
                 project_id=new_project.id,
-                role_id=1 # Default Admin role
+                role_id=1  # Default Admin role
             )
             db.add(creator_assignment)
 
         db.commit()
         db.refresh(new_project)
-        
+
         return {
-            "message": "Project created successfully", 
+            "message": "Project created successfully",
             "id": new_project.id,
-            "name": new_project.name
+            "name": new_project.name,
+            "drive_folder_id": drive_folder_id,
         }
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create project: {str(e)}")
+
 
 
 @app.delete("/db/delete-project")

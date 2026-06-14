@@ -43,7 +43,10 @@ class ProjectDetailsModel(Base):
     
     change_number = Column(String(100), nullable=True)
     system_application_name = Column(String(200), nullable=True)
-    
+
+    # Google Drive integration
+    drive_folder_id = Column(String(255), nullable=True)  # ID of the project folder in ValiSure_Projects
+
     # Complex config objects
     methodologies = Column(JSON, nullable=True)
     gamp_categories = Column(JSON, nullable=True)

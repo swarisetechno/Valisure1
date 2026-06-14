@@ -1,303 +1,336 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Menu, ChevronLeft, ChevronRight, LayoutDashboard, FolderOpen, FileText, Lock, Search, Moon, Sun, ChevronDown, RefreshCcwDot } from "lucide-react";
+import {
+  LogOut, ChevronLeft, ChevronRight, LayoutDashboard, FolderOpen,
+  FileText, Lock, Search, Moon, Sun, ChevronDown, RefreshCcwDot,
+  PlusCircle, CheckCircle, AlertCircle, Upload, Trash2
+} from "lucide-react";
+
+const API_BASE = "http://localhost:8000";
+
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem("authToken");
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
+
+const DEFAULT_CSV_TEMPLATES = [
+  "URS - User Request Specification",
+  "URRA-User Requirement Risk Assessment",
+  "QxP Assessment",
+  "CRF Part 11 (ERES)",
+  "SRS-System Risk Assessment",
+  "Validation Plan",
+  "FRS-Functional Requirement Specification",
+  "FRA-Functional Risk Assessment",
+  "DS-Design Specification",
+  "IQ Scripted Test Script",
+  "IQ Unscripted Test Script",
+  "OQ Scripted Test Script",
+  "OQ Unscripted Test Script",
+  "PQ Scripted Test Script",
+  "PQ Unscripted Test Script",
+  "RTM-Requirements Traceability Matrix",
+  "Validation Summary Report",
+];
 
 const CSVTemplate = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
-  const [expandedMenu, setExpandedMenu] = useState({
-    projects: true,
-    templates: true,
-    accessControl: false,
-  });
+  const [expandedMenu, setExpandedMenu] = useState({ projects: true, templates: true, accessControl: false });
+
+  const [checkedReplace, setCheckedReplace] = useState<Set<number>>(new Set());
+  const [replaceFiles, setReplaceFiles] = useState<Record<number, File>>({});
+  const [replaceStatus, setReplaceStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [replaceMsg, setReplaceMsg] = useState("");
+
+  const [existingTemplates, setExistingTemplates] = useState<string[]>(DEFAULT_CSV_TEMPLATES);
+  const [newTemplateName, setNewTemplateName] = useState("");
+  const [newTemplateFile, setNewTemplateFile] = useState<File | null>(null);
+  const [addStatus, setAddStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [addMsg, setAddMsg] = useState("");
+  const addFileRef = useRef<HTMLInputElement>(null);
 
   const handleLogout = () => {
     localStorage.removeItem("userRole");
     localStorage.removeItem("userName");
+    localStorage.removeItem("authToken");
     navigate("/");
+  };
+
+  const toggleReplace = (idx: number) => {
+    setCheckedReplace(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) {
+        next.delete(idx);
+        setReplaceFiles(f => { const copy = { ...f }; delete copy[idx]; return copy; });
+      } else {
+        next.add(idx);
+      }
+      return next;
+    });
+    setReplaceStatus("idle");
+    setReplaceMsg("");
+  };
+
+  const handleReplaceFileChange = (idx: number, file: File | null) => {
+    if (!file) return;
+    setReplaceFiles(prev => ({ ...prev, [idx]: file }));
+  };
+
+  const handleReplace = async () => {
+    const selected = Array.from(checkedReplace);
+    if (selected.length === 0) { setReplaceMsg("Please select at least one template to replace."); setReplaceStatus("error"); return; }
+    const missing = selected.filter(idx => !replaceFiles[idx]);
+    if (missing.length > 0) { setReplaceMsg(`Please upload a .docx file for each selected template (${missing.length} missing).`); setReplaceStatus("error"); return; }
+    setReplaceStatus("loading"); setReplaceMsg("Replacing templates...");
+    try {
+      for (const idx of selected) {
+        const formData = new FormData();
+        formData.append("file", replaceFiles[idx]);
+        formData.append("template_name", DEFAULT_CSV_TEMPLATES[idx]);
+        formData.append("category", "CSV");
+        const res = await fetch(`${API_BASE}/templates/upload`, { method: "POST", headers: getAuthHeaders(), body: formData });
+        if (!res.ok) { const err = await res.json().catch(() => ({ detail: "Upload failed" })); throw new Error(err.detail || "Upload failed"); }
+      }
+      setReplaceStatus("success");
+      setReplaceMsg(`✓ Successfully replaced ${selected.length} template(s).`);
+      setCheckedReplace(new Set());
+      setReplaceFiles({});
+    } catch (err: any) { setReplaceStatus("error"); setReplaceMsg(err.message || "Failed to replace templates."); }
+  };
+
+  const handleAddTemplate = async () => {
+    if (!newTemplateName.trim()) { setAddMsg("Please enter a template name."); setAddStatus("error"); return; }
+    if (!newTemplateFile) { setAddMsg("Please upload a .docx file."); setAddStatus("error"); return; }
+    setAddStatus("loading"); setAddMsg("Adding template...");
+    try {
+      const formData = new FormData();
+      formData.append("file", newTemplateFile);
+      formData.append("template_name", newTemplateName.trim());
+      formData.append("category", "CSV");
+      const res = await fetch(`${API_BASE}/templates/upload`, { method: "POST", headers: getAuthHeaders(), body: formData });
+      if (!res.ok) { const err = await res.json().catch(() => ({ detail: "Upload failed" })); throw new Error(err.detail || "Upload failed"); }
+      setExistingTemplates(prev => [...prev, newTemplateName.trim()]);
+      setAddStatus("success"); setAddMsg(`✓ "${newTemplateName.trim()}" added to CSV templates.`);
+      setNewTemplateName(""); setNewTemplateFile(null);
+      if (addFileRef.current) addFileRef.current.value = "";
+    } catch (err: any) { setAddStatus("error"); setAddMsg(err.message || "Failed to add template."); }
   };
 
   return (
     <div className={`flex min-h-screen ${darkMode ? "bg-[#DAE0F1]" : "bg-white"}`}>
-      {/* Sidebar - Full and Minimal View */}
-      <aside
-        className={`fixed left-0 top-0 h-screen bg-[#1D2749] transition-all duration-300 z-40 ${
-          sidebarOpen ? "w-64" : "w-24"
-        }`}
-      >
-        {/* Sidebar Header */}
+      {/* Sidebar */}
+      <aside className={`fixed left-0 top-0 h-screen bg-[#1D2749] transition-all duration-300 z-40 ${sidebarOpen ? "w-64" : "w-24"}`}>
         <div className={`flex items-center border-b border-[#6D81C5] px-5 py-6 ${sidebarOpen ? "justify-between" : "justify-center"}`}>
           {sidebarOpen && <h1 className="text-white font-bold text-lg">ValiSure</h1>}
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full bg-[#91A1D4] ${!sidebarOpen ? "w-10 h-10" : ""}`}>
+          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#91A1D4]">
             <span className="text-white font-bold text-sm">VS</span>
           </div>
         </div>
-
-        {/* Navigation Links */}
         <nav className={`flex flex-col gap-3 ${sidebarOpen ? "px-7 py-10" : "px-3 py-10"}`}>
-          {/* Admin Dashboard */}
-          <a
-            href="#"
-            onClick={() => navigate("/admin-dashboard")}
-            className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition ${!sidebarOpen ? "justify-center" : ""}`}
-            title="Admin Dashboard"
-          >
+          <button onClick={() => navigate("/admin")} className="flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full">
             <LayoutDashboard size={24} />
             {sidebarOpen && <span className="text-sm font-medium">Admin Dashboard</span>}
-          </a>
-
-          {/* Projects */}
-          <button
-            onClick={() => setExpandedMenu({ ...expandedMenu, projects: !expandedMenu.projects })}
-            className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`}
-            title="Projects"
-          >
+          </button>
+          <button onClick={() => setExpandedMenu(m => ({ ...m, projects: !m.projects }))} className="flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full">
             <FolderOpen size={20} />
-            {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Projects</span>}
-            {sidebarOpen && (
-              <ChevronDown
-                size={18}
-                className={`transition-transform ${expandedMenu.projects ? "rotate-180" : ""}`}
-              />
-            )}
+            {sidebarOpen && <><span className="text-sm font-medium flex-1 text-left">Projects</span><ChevronDown size={18} className={`transition-transform ${expandedMenu.projects ? "rotate-180" : ""}`} /></>}
           </button>
           {sidebarOpen && expandedMenu.projects && (
             <div className="flex flex-col gap-2 pl-12 pr-4 py-2">
-              <button 
-                onClick={() => navigate("/create-project")}
-                className="text-sm text-gray-300 hover:text-white text-left transition"
-              >
-                New projects
-              </button>
-              <button onClick={() => navigate("/admin")} className="text-sm text-gray-300 hover:text-white text-left transition">
-                Existing project
-              </button>
+              <button onClick={() => navigate("/create-project")} className="text-sm text-gray-300 hover:text-white text-left">New projects</button>
+              <button onClick={() => navigate("/admin")} className="text-sm text-gray-300 hover:text-white text-left">Existing project</button>
             </div>
           )}
-
-          {/* Templates */}
-          <button
-            onClick={() => setExpandedMenu({ ...expandedMenu, templates: !expandedMenu.templates })}
-            className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`}
-            title="Templates"
-          >
+          <button onClick={() => setExpandedMenu(m => ({ ...m, templates: !m.templates }))} className="flex items-center gap-3 rounded-lg px-4 py-3 text-white bg-[#2d3a5a] transition w-full">
             <FileText size={20} />
-            {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Templates</span>}
-            {sidebarOpen && (
-              <ChevronDown
-                size={18}
-                className={`transition-transform ${expandedMenu.templates ? "rotate-180" : ""}`}
-              />
-            )}
+            {sidebarOpen && <><span className="text-sm font-medium flex-1 text-left">Templates</span><ChevronDown size={18} className={`transition-transform ${expandedMenu.templates ? "rotate-180" : ""}`} /></>}
           </button>
           {sidebarOpen && expandedMenu.templates && (
             <div className="flex flex-col gap-2 pl-12 pr-4 py-2">
-              <button 
-                onClick={() => navigate("/csa-template")}
-                className="text-sm text-gray-300 hover:text-white text-left transition"
-              >
-                CSA
-              </button>
-              <button 
-                onClick={() => navigate("/csv-template")}
-                className="text-sm text-gray-300 hover:text-white text-left transition"
-              >
-                CSV
-              </button>
+              <button onClick={() => navigate("/csa-template")} className="text-sm text-gray-300 hover:text-white text-left">CSA</button>
+              <button onClick={() => navigate("/csv-template")} className="text-sm text-white font-semibold text-left">CSV</button>
             </div>
           )}
-
-          {/* Access Control */}
-          <button
-            onClick={() => setExpandedMenu({ ...expandedMenu, accessControl: !expandedMenu.accessControl })}
-            className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`}
-            title="Access Control"
-          >
+          <button onClick={() => setExpandedMenu(m => ({ ...m, accessControl: !m.accessControl }))} className="flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full">
             <Lock size={20} />
-            {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Access Control</span>}
-            {sidebarOpen && (
-              <ChevronDown
-                size={18}
-                className={`transition-transform ${expandedMenu.accessControl ? "rotate-180" : ""}`}
-              />
-            )}
+            {sidebarOpen && <><span className="text-sm font-medium flex-1 text-left">Access Control</span><ChevronDown size={18} className={`transition-transform ${expandedMenu.accessControl ? "rotate-180" : ""}`} /></>}
           </button>
           {sidebarOpen && expandedMenu.accessControl && (
             <div className="flex flex-col gap-2 pl-12 pr-4 py-2">
-              <button 
-                onClick={() => navigate("/create-user")}
-                className="text-sm text-gray-300 hover:text-white text-left transition"
-              >
-                Create User
-              </button>
-              <button 
-                onClick={() => navigate("/add-user")}
-                className="text-sm text-gray-300 hover:text-white text-left transition"
-              >
-                Add User
-              </button>
-              <button 
-                onClick={() => navigate("/manage-user")}
-                className="text-sm text-gray-300 hover:text-white text-left transition"
-              >
-                Manage User
-              </button>
+              <button onClick={() => navigate("/create-user")} className="text-sm text-gray-300 hover:text-white text-left">Create User</button>
+              <button onClick={() => navigate("/add-user")} className="text-sm text-gray-300 hover:text-white text-left">Add User</button>
+              <button onClick={() => navigate("/manage-user")} className="text-sm text-gray-300 hover:text-white text-left">Manage User</button>
             </div>
           )}
         </nav>
-
-        {/* Footer - Theme & Logout */}
         <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 px-3">
           {sidebarOpen && (
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="flex items-center justify-center gap-3 px-4 py-3 text-white hover:bg-[#2d3a5a] rounded-lg transition"
-              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            >
+            <button onClick={() => setDarkMode(d => !d)} className="flex items-center justify-center px-4 py-3 text-white hover:bg-[#2d3a5a] rounded-lg transition">
               {darkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
           )}
-          <button
-            onClick={handleLogout}
-            className="flex items-center justify-center gap-3 px-4 py-3 text-white bg-red-500 hover:bg-red-600 rounded-lg transition"
-            title="Logout"
-          >
+          <button onClick={handleLogout} className="flex items-center justify-center px-4 py-3 text-white bg-red-500 hover:bg-red-600 rounded-lg transition">
             <LogOut size={20} />
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className={`transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-24"}  flex-1`}>
-        {/* Top Header */}
+      <div className={`transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-24"} flex-1`}>
         <header className={`bg-[#1D2749] text-white h-20 flex items-center justify-between px-5 lg:px-8 fixed lg:absolute top-0 left-0 right-0 z-30 ${sidebarOpen ? "lg:left-64" : "lg:left-24"} transition-all duration-300`}>
-          {/* Left Arrow Toggle */}
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="flex items-center justify-center w-6 h-6 bg-[#DAE0F1] rounded-full hover:opacity-80 transition"
-            title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-          >
-            {sidebarOpen ? (
-              <ChevronLeft size={16} className="text-[#3A4E92]" />
-            ) : (
-              <ChevronRight size={16} className="text-[#3A4E92]" />
-            )}
+          <button onClick={() => setSidebarOpen(s => !s)} className="flex items-center justify-center w-6 h-6 bg-[#DAE0F1] rounded-full hover:opacity-80 transition">
+            {sidebarOpen ? <ChevronLeft size={16} className="text-[#3A4E92]" /> : <ChevronRight size={16} className="text-[#3A4E92]" />}
           </button>
-
-          {/* Right Side Content */}
           <div className="flex items-center gap-4">
-            <div className="w-6 h-6 bg-[#DAE0F1] rounded-full flex items-center justify-center">
-              <Search size={16} className="text-[#3A4E92]" />
-            </div>
+            <div className="w-6 h-6 bg-[#DAE0F1] rounded-full flex items-center justify-center"><Search size={16} className="text-[#3A4E92]" /></div>
             <div className="flex flex-col items-end">
               <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, Admin</p>
               <p className="text-xs text-gray-300">Administrator</p>
             </div>
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277]"></div>
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277]" />
           </div>
         </header>
 
-        {/* Page Content */}
         <main className="p-8 pt-24">
-          {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm mb-8">
-            <button
-              onClick={() => navigate("/admin-dashboard")}
-              className="text-[#504539] hover:text-[#1F1B16] transition"
-            >
-              Templates
-            </button>
+            <button onClick={() => navigate("/admin")} className="text-[#504539] hover:text-[#1F1B16] transition">Templates</button>
             <span className="text-gray-400">/</span>
             <span className="text-[#1F1B16] font-semibold">CSV</span>
           </div>
-
           <h1 className="text-4xl font-bold text-[#1F1B16] mb-8">Admin CSV</h1>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Existing Templates - CSV */}
-            <div className="bg-white rounded-lg p-6 shadow-lg">
+
+            {/* Column 1: Existing Templates */}
+            <div className="bg-white rounded-xl p-6 shadow-lg">
               <div className="flex items-center gap-3 mb-6">
                 <FileText size={24} className="text-[#2B3B6E]" />
                 <h2 className="text-lg font-bold text-[#1D1C1B]">Existing Templates</h2>
               </div>
-
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {[
-                  "URS-User Request Specification",
-                  "URRA-User Requirement Risk Assessment",
-                  "QxP Assessment",
-                  "CRF Part 11 (ERES)",
-                  "SRS-System Risk Assessment",
-                  "Validation Plan",
-                  "FRS-Functional Requirement Specification",
-                  "FRA-Functional Risk Assessment",
-                  "DS-Design Specification",
-                  "IQ Scripted Test Script",
-                  "IQ Unscripted Test Script",
-                  "OQ Scripted Test Script",
-                  "OQ Unscripted Test Script",
-                  "PQ Scripted Test Script",
-                  "PQ Unscripted Test Script",
-                  "RTM-Requirements Traceability Matrix",
-                  "Validation Summary Report",
-                ].map((template, index) => (
-                  <div key={index} className="text-sm text-[#504539] py-2 px-3 hover:bg-gray-50 rounded transition">
-                    {template}
+              <div className="space-y-1 max-h-[420px] overflow-y-auto pr-1">
+                {existingTemplates.map((template, index) => (
+                  <div key={index} className="flex items-center justify-between text-sm text-[#504539] py-2 px-3 hover:bg-gray-50 rounded transition group">
+                    <span>{template}</span>
+                    {!DEFAULT_CSV_TEMPLATES.includes(template) && (
+                      <button onClick={() => setExistingTemplates(prev => prev.filter(t => t !== template))} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition" title="Remove">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Replace New Templates - CSV */}
-            <div className="bg-white rounded-lg p-6 shadow-lg">
-              <div className="flex items-center gap-3 mb-6">
+            {/* Column 2: Replace New Templates */}
+            <div className="bg-white rounded-xl p-6 shadow-lg flex flex-col">
+              <div className="flex items-center gap-3 mb-2">
                 <RefreshCcwDot size={24} className="text-[#2B3B6E]" />
                 <h2 className="text-lg font-bold text-[#1F1B16]">Replace New Templates</h2>
               </div>
+              <p className="text-xs text-gray-500 mb-4">Check templates to replace, then upload a new <code>.docx</code> for each.</p>
 
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {[
-                  "URS-User Request Specification",
-                  "URRA-User Requirement Risk Assessment",
-                  "QxP Assessment",
-                  "CRF Part 11 (ERES) Assessment",
-                  "SRS-System Risk Assessment",
-                  "Sys - System Risk",
-                  "FRS-Functional Requirement Specification",
-                  "DRS - Design Specification",
-                  "IQ Scripted Test Script",
-                  "OQ Scripted Test Script",
-                  "PQ Scripted Test Script",
-                  "RTM-Requirements Traceability Matrix",
-                  "Validation Summary Report",
-                ].map((template, index) => (
-                  <label key={index} className="flex items-center gap-3 py-2 px-3 rounded hover:bg-gray-50 cursor-pointer transition">
-                    <input type="checkbox" className="w-4 h-4 rounded" />
-                    <span className="text-sm text-[#504539]">{template}</span>
-                  </label>
+              <div className="space-y-2 max-h-[320px] overflow-y-auto flex-1 pr-1">
+                {DEFAULT_CSV_TEMPLATES.map((template, idx) => (
+                  <div key={idx} className={`rounded-lg border transition ${checkedReplace.has(idx) ? "border-[#3A4E92] bg-[#f0f3fc]" : "border-gray-100 hover:border-[#DAE0F1]"}`}>
+                    <label className="flex items-center gap-3 py-2 px-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={checkedReplace.has(idx)}
+                        onChange={() => toggleReplace(idx)}
+                        className="w-4 h-4 accent-[#1D2749] rounded"
+                      />
+                      <span className={`text-sm flex-1 ${checkedReplace.has(idx) ? "text-[#1D2749] font-semibold" : "text-[#504539]"}`}>{template}</span>
+                    </label>
+                    {checkedReplace.has(idx) && (
+                      <div className="px-3 pb-3">
+                        <label className="flex items-center gap-2 cursor-pointer bg-white border border-dashed border-[#6D81C5] rounded px-3 py-2 text-xs text-[#3A4E92] hover:bg-[#DAE0F1] transition">
+                          <Upload size={14} />
+                          {replaceFiles[idx]
+                            ? <span className="truncate max-w-[160px] text-green-700 font-medium">✓ {replaceFiles[idx].name}</span>
+                            : "Upload new .docx"}
+                          <input type="file" accept=".docx" className="hidden" onChange={e => handleReplaceFileChange(idx, e.target.files?.[0] || null)} />
+                        </label>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
+
+              {replaceMsg && (
+                <div className={`mt-3 flex items-center gap-2 text-xs rounded px-3 py-2 ${replaceStatus === "success" ? "bg-green-50 text-green-700" : replaceStatus === "error" ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700"}`}>
+                  {replaceStatus === "success" ? <CheckCircle size={14} /> : replaceStatus === "error" ? <AlertCircle size={14} /> : null}
+                  {replaceMsg}
+                </div>
+              )}
+
+              <button
+                onClick={handleReplace}
+                disabled={replaceStatus === "loading" || checkedReplace.size === 0}
+                className="mt-4 w-full py-2 bg-[#1D2749] text-white rounded-lg font-semibold hover:bg-[#2d3a5a] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+              >
+                <RefreshCcwDot size={16} />
+                {replaceStatus === "loading" ? "Replacing..." : `Replace${checkedReplace.size > 0 ? ` (${checkedReplace.size})` : ""}`}
+              </button>
             </div>
 
-            {/* Add New Templates - CSV */}
-            <div className="bg-white rounded-lg p-6 shadow-lg">
-              <div className="flex items-center gap-3 mb-6">
-                <span className="text-2xl">⊕</span>
-                <h3 className="text-lg font-bold text-[#1D1C1B]">Add New Templates</h3>
+            {/* Column 3: Add New Template */}
+            <div className="bg-white rounded-xl p-6 shadow-lg flex flex-col">
+              <div className="flex items-center gap-3 mb-2">
+                <PlusCircle size={24} className="text-[#2B3B6E]" />
+                <h2 className="text-lg font-bold text-[#1D1C1B]">Add New Template</h2>
+              </div>
+              <p className="text-xs text-gray-500 mb-5">Enter the template name and upload a <code>.docx</code> file. It will be available when creating a new project.</p>
+
+              <div className="space-y-4 flex-1">
+                <div>
+                  <label className="block text-xs font-semibold text-[#504539] mb-1">Template Name</label>
+                  <input
+                    type="text"
+                    value={newTemplateName}
+                    onChange={e => setNewTemplateName(e.target.value)}
+                    placeholder="e.g. QP - Quality Plan"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#1F1B16] outline-none focus:border-[#3A4E92] focus:ring-1 focus:ring-[#DAE0F1] transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#504539] mb-1">Upload .docx File</label>
+                  <label className="flex items-center gap-2 cursor-pointer bg-[#f5f7fc] border border-dashed border-[#6D81C5] rounded-lg px-3 py-3 text-sm text-[#3A4E92] hover:bg-[#DAE0F1] transition">
+                    <Upload size={16} />
+                    {newTemplateFile
+                      ? <span className="truncate max-w-[180px] font-medium text-green-700">✓ {newTemplateFile.name}</span>
+                      : "Click to upload .docx template"}
+                    <input type="file" accept=".docx" ref={addFileRef} className="hidden" onChange={e => setNewTemplateFile(e.target.files?.[0] || null)} />
+                  </label>
+                </div>
+                {newTemplateName.trim() && (
+                  <div className="bg-[#DAE0F1] rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-1">Preview</p>
+                    <span className="font-semibold text-[#1D1C1B] text-sm">{newTemplateName.trim()}</span>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-3">
-                <div className="bg-[#DAE0F1] rounded-lg p-4">
-                  <span className="font-semibold text-[#1D1C1B]">QP - Quality Plan</span>
+              {addMsg && (
+                <div className={`mt-3 flex items-center gap-2 text-xs rounded px-3 py-2 ${addStatus === "success" ? "bg-green-50 text-green-700" : addStatus === "error" ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700"}`}>
+                  {addStatus === "success" ? <CheckCircle size={14} /> : addStatus === "error" ? <AlertCircle size={14} /> : null}
+                  {addMsg}
                 </div>
-                <div className="flex justify-center">
-                  <button className="px-4 py-2 bg-[#11172B] text-white rounded font-semibold hover:opacity-90 transition text-sm">
-                    + Add
-                  </button>
-                </div>
-              </div>
+              )}
+
+              <button
+                onClick={handleAddTemplate}
+                disabled={addStatus === "loading"}
+                className="mt-4 w-full py-2 bg-[#11172B] text-white rounded-lg font-semibold hover:bg-[#1D2749] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+              >
+                <PlusCircle size={16} />
+                {addStatus === "loading" ? "Adding..." : "+ Add Template"}
+              </button>
             </div>
+
           </div>
         </main>
       </div>
