@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, Plus, Moon, Sun, LogOut, LayoutDashboard, FolderOpen, FileText, Search, X, MoreVertical, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, Moon, Sun, LogOut, LayoutDashboard, FolderOpen, FileText, Search, X, MoreVertical, AlertCircle, CheckCircle2, Eye, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { projectApi, documentApi } from '../services/api';
 
@@ -219,13 +219,8 @@ export default function ProjectArtifactOverview() {
         {/* Sidebar Header */}
         <div className={`flex items-center justify-center border-b border-[#6D81C5] px-5 h-20`}>
           {sidebarOpen && <h1 className="text-white font-bold text-lg">ValiSure</h1>}
-          {sidebarOpen && (
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#91A1D4]">
-              <span className="text-white font-bold text-sm">VS</span>
-            </div>
-          )}
           {!sidebarOpen && (
-            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#91A1D4]">
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full bg-[#91A1D4]`}>
               <span className="text-white font-bold text-sm">VS</span>
             </div>
           )}
@@ -361,7 +356,9 @@ export default function ProjectArtifactOverview() {
           {/* Right Side Content */}
           <div className="flex items-center gap-4">
             <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, {localStorage.getItem("userName") || "Author"}</p>
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277]"></div>
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277] flex items-center justify-center">
+              <User size={16} className="text-white" />
+            </div>
           </div>
         </header>
 
@@ -441,7 +438,8 @@ export default function ProjectArtifactOverview() {
                     Add Requirement
                   </button>
                   <button className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-full hover:bg-green-700 transition font-semibold whitespace-nowrap">
-                    ≡ƒôä Document Viewer
+                    <Eye size={18} />
+                    Document Viewer
                   </button>
                   <button className="border-2 border-gray-300 text-gray-900 px-6 py-3 rounded-full hover:bg-gray-50 transition font-semibold whitespace-nowrap bg-white">
                     Import
@@ -560,12 +558,18 @@ export default function ProjectArtifactOverview() {
                 </div>
 
                 {/* Table Footer */}
-                <div className="px-8 py-5 bg-white border-t border-gray-200 flex items-center justify-between text-sm text-gray-600">
-                  <p>Showing {requirementsData.length} of {requirementsData.length} active requirements</p>
-                  <div className="flex gap-2">
-                    <button className="border border-gray-300 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 transition text-gray-600">ΓÇ╣</button>
-                    <span className="w-8 h-8 flex items-center justify-center text-gray-900 font-semibold">1</span>
-                    <button className="border border-gray-300 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 transition text-gray-600">ΓÇ║</button>
+                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-300">
+                  <p className="text-xs font-semibold text-[#504539]">
+                    Showing {requirementsData.length} of {requirementsData.length} active requirements
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button className="p-1 border border-gray-300 rounded hover:bg-gray-50 transition">
+                      <ChevronLeft size={16} />
+                    </button>
+                    <span className="text-xs font-semibold text-[#504539]">1</span>
+                    <button className="p-1 border border-gray-300 rounded hover:bg-gray-50 transition">
+                      <ChevronRight size={16} />
+                    </button>
                   </div>
                 </div>
               </div>

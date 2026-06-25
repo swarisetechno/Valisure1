@@ -19,28 +19,18 @@ from schemas import (
     UpdateHeadingContentRequest, GenerateHeadingContentRequest, UpdateHeadingStatusRequest,
     CreateProjectRequest
 )
-from user_routes_new import create_user_router
+from user_routes import create_user_router
 from role_routes import create_role_router
 from auth import decode_token
 from models import ProjectModel, UserProjectRoleModel
 
 
 # -------------------- ENV --------------------
-load_dotenv()
-
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_USER = os.getenv("DB_USER")
-DB_PASS = os.getenv("DB_PASS")
-DB_NAME = os.getenv("DB_NAME")
-
-DATABASE_URL = (
-    f"postgresql+psycopg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-)
+from db_config import DATABASE_URL
 
 # -------------------- APP --------------------
 app = FastAPI()
-BASE_PATH = r"C:\Users\Prabhu\Downloads\docs"
+BASE_PATH = os.getenv("DOCS_PATH", os.path.join(os.path.dirname(__file__), "docs"))
 
 
 app.add_middleware(
@@ -1036,12 +1026,19 @@ def create_project(
         # 5. Auto-assign creator as Admin if not already in the list
         already_assigned = any(m.user_id == current_user.id for m in (req.team_members or []))
         if not already_assigned:
-            creator_assignment = UserProjectRoleModel(
-                user_id=current_user.id,
-                project_id=new_project.id,
-                role_id=1  # Default Admin role
-            )
-            db.add(creator_assignment)
+            # Dynamically look up the Admin role instead of hardcoding role_id=1
+            admin_role = db.query(RoleModel).filter(
+                RoleModel.permission_level == "admin"
+            ).first()
+            if admin_role:
+                creator_assignment = UserProjectRoleModel(
+                    user_id=current_user.id,
+                    project_id=new_project.id,
+                    role_id=admin_role.id
+                )
+                db.add(creator_assignment)
+            else:
+                print("[create_project] WARNING: No admin role found — creator not auto-assigned.")
 
         db.commit()
         db.refresh(new_project)
@@ -1656,7 +1653,7 @@ def audit_health_check():
             raise Exception("redis package not installed")
         from dotenv import load_dotenv
         load_dotenv()
-        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6380/0")
         r = redis_lib.from_url(redis_url)
         r.ping()
         health_status["components"]["redis"] = "ok"

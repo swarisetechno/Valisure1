@@ -53,13 +53,13 @@ Redis is required for the message queue.
 
 ```bash
 # Windows (if installed)
-redis-server
+redis-server --port 6380 --bind 127.0.0.1
 
 # macOS (with Homebrew)
 brew services start redis
 
 # Docker
-docker run -d -p 6379:6379 redis:latest
+docker run -d -p 6380:6380 redis:latest
 ```
 
 Verify Redis is running:
@@ -81,9 +81,9 @@ DB_PASS= Database password
 DB_NAME= Your database name
 
 # Redis configuration
-REDIS_URL=redis://localhost:6379/0
-CELERY_BROKER_URL=redis://localhost:6379/0
-CELERY_RESULT_BACKEND=redis://localhost:6379/1
+REDIS_URL=redis://localhost:6380/0
+CELERY_BROKER_URL=redis://localhost:6380/0
+CELERY_RESULT_BACKEND=redis://localhost:6380/1
 ```
 
 ### 4. Start FastAPI Server
@@ -126,6 +126,7 @@ ValiSure Audit Trail - Celery Worker
 
 Starting Celery worker...
 - Broker: redis://localhost:6379/0
+- Broker: redis://localhost:6380/0
 - Concurrency: 4 workers
 ```
 

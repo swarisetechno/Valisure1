@@ -1,4 +1,4 @@
-﻿import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { LogOut, Menu, LayoutDashboard, ChevronLeft, ChevronRight, Sun, Moon } from "lucide-react";
 import { useState } from "react";
 
@@ -139,7 +139,7 @@ const UserDashboard = () => {
                         dashboard.current ? "font-bold text-[#30628A]" : "text-blue-600 hover:text-blue-800"
                       }`}
                     >
-                      ΓåÆ {dashboard.name}
+                      <ChevronRight size={14} className="inline mr-1 align-middle" /> {dashboard.name}
                     </a>
                   </li>
                 ))}

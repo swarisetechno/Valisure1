@@ -86,6 +86,8 @@ class UserModel(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
+    first_name = Column(String(100), nullable=False)
+    last_name = Column(String(100), nullable=False)
     username = Column(String(100), unique=True, nullable=False)
     email = Column(String(255), unique=True, nullable=True)
     password_hash = Column(String(255), nullable=True)
@@ -95,6 +97,11 @@ class UserModel(Base):
     status = Column(String(50), default="Active")
     last_login = Column(DateTime(timezone=True), nullable=True)
     
+    # Legacy 'role' VARCHAR column (now nullable) – kept for DB compatibility.
+    # The app uses role_id (FK to roles table) for role management.
+    # Mapped as 'role_label' to avoid name collision with the role relationship.
+    role_label = Column("role", String(50), nullable=True)
+
     # The global role_id can be used as a super-admin flag if needed, 
     # but primarily we'll use per-project roles.
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)

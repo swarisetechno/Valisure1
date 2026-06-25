@@ -11,7 +11,7 @@ Write-Host "Activating virtual environment..."
 . "venv\Scripts\Activate.ps1"
 
 Write-Host "Starting Celery worker..."
-Write-Host "- Broker: redis://localhost:6379/0"
+Write-Host "- Broker: redis://localhost:6380/0"
 Write-Host "- Concurrency: 4 workers"
 Write-Host ""
 

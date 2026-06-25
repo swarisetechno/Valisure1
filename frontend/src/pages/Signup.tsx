@@ -1,9 +1,43 @@
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { userApi } from "@/services/api";
 
 const Signup = () => {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError("");
+
+    if (!termsAccepted) {
+      setError("You must agree to the Terms & Privacy before creating an account.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await userApi.create({
+        username: fullName.trim(),
+        email: email.trim(),
+        password,
+      });
+
+      navigate("/");
+    } catch (err: any) {
+      setError(err.message || "Unable to create account. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="relative min-h-screen w-full bg-[hsl(var(--background))] overflow-hidden">
@@ -29,7 +63,13 @@ const Signup = () => {
 
       <main className="relative lg:absolute lg:left-[57.36%] lg:top-1/2 lg:-translate-y-1/2 flex min-h-screen lg:min-h-0 items-center justify-center p-4 lg:p-0 lg:w-[42.64%]">
         <div className="w-full max-w-[512px] bg-[hsl(var(--brand-card))] border border-[hsl(var(--brand-card-border)/0.4)] shadow-[0px_20px_40px_rgba(31,27,22,0.06)] rounded-xl px-6 sm:px-12 pt-12 sm:pt-[73px] pb-12 flex flex-col gap-8">
-          <form className="flex flex-col gap-6 w-full">
+          <form className="flex flex-col gap-6 w-full" onSubmit={handleSignup}>
+            {error && (
+              <div className="rounded-lg border border-red-400 bg-red-100 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
             <div className="flex flex-col gap-2">
               <label htmlFor="name" className="px-1 text-[12px] font-medium leading-[18px] tracking-[0.3px] capitalize text-[hsl(var(--brand-label))]">
                 Full Name *
@@ -38,6 +78,9 @@ const Signup = () => {
                 id="name"
                 type="text"
                 placeholder="Enter your full name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
                 className="h-[55px] px-5 py-[18px] rounded-lg bg-[hsl(var(--brand-input))] text-[16px] leading-[19px] text-[hsl(var(--brand-text))] placeholder:text-[hsl(var(--brand-text))] outline-none focus:ring-2 focus:ring-[hsl(var(--brand-input-border))]"
               />
             </div>
@@ -50,6 +93,9 @@ const Signup = () => {
                 id="email"
                 type="email"
                 placeholder="Enter email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 className="h-[55px] px-5 py-[18px] rounded-lg bg-[hsl(var(--brand-input))] text-[16px] leading-[19px] text-[hsl(var(--brand-text))] placeholder:text-[hsl(var(--brand-text))] outline-none focus:ring-2 focus:ring-[hsl(var(--brand-input-border))]"
               />
             </div>
@@ -63,6 +109,9 @@ const Signup = () => {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Create a password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
                   className="w-full h-[55px] px-5 py-[18px] pr-12 rounded-lg bg-[hsl(var(--brand-input))] text-[16px] leading-[19px] text-[hsl(var(--brand-text))] placeholder:text-[hsl(var(--brand-text))] outline-none focus:ring-2 focus:ring-[hsl(var(--brand-input-border))]"
                 />
                 <button
@@ -80,6 +129,8 @@ const Signup = () => {
               <input
                 id="terms"
                 type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
                 className="w-5 h-5 rounded bg-[hsl(var(--brand-input))] border border-[hsl(var(--brand-input-border))] accent-[hsl(var(--brand-dark))]"
               />
               <label htmlFor="terms" className="text-[14px] leading-[20px] text-[hsl(var(--brand-label))]">
@@ -89,9 +140,10 @@ const Signup = () => {
 
             <button
               type="submit"
+              disabled={loading}
               className="h-[60px] w-full rounded-full bg-[hsl(var(--brand-dark))] text-[hsl(0_0%_97%)] text-[18px] font-semibold leading-[28px] shadow-[0px_10px_15px_-3px_rgba(127,86,21,0.2),0px_4px_6px_-4px_rgba(127,86,21,0.2)] hover:opacity-95 transition"
             >
-              Create Account
+              {loading ? "Creating Account..." : "Create Account"}
             </button>
           </form>
 

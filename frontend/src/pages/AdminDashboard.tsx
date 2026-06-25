@@ -46,19 +46,22 @@ const AdminDashboard = () => {
     try {
       const res = await projectApi.list();
       if (res && res.projects) {
-        setProjects(res.projects.map((project: any) => ({
-          id: project.id,
-          name: project.name,
-          updated: `Created on ${project.createdDate || '-'}`,
-          changeId: project.details?.change_number || "-",
-          category: project.details?.gamp_categories ? Object.keys(project.details.gamp_categories).filter(k => project.details.gamp_categories[k]).join(", ") : "-",
-          csvCsa: project.details?.methodologies ? (project.details.methodologies.csv ? "CSV" : (project.details.methodologies.csa ? "CSA" : "-")) : "-",
-          status: "ACTIVE",
-          createdBy: project.createdBy || "-",
-          createdDate: project.createdDate || "-",
-          modifiedBy: "-",
-          modifiedDate: "-",
-        })));
+        setProjects(res.projects.map((project: any) => {
+          const dateStr = project.created_at ? project.created_at.split('T')[0] : "-";
+          return {
+            id: project.id,
+            name: project.name,
+            updated: `Created on ${dateStr}`,
+            changeId: project.details?.change_number || "-",
+            category: project.details?.gamp_categories ? Object.keys(project.details.gamp_categories).filter(k => project.details.gamp_categories[k]).join(", ") : "-",
+            csvCsa: project.details?.methodologies ? (project.details.methodologies.csv ? "CSV" : (project.details.methodologies.csa ? "CSA" : "-")) : "-",
+            status: "ACTIVE",
+            createdBy: project.createdBy || "-",
+            createdDate: dateStr,
+            modifiedBy: "-",
+            modifiedDate: "-",
+          };
+        }));
       }
     } catch (error) {
       console.error("Failed to fetch projects", error);

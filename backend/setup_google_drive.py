@@ -4,7 +4,7 @@ It will open a browser window asking you to log in with your Google account.
 After you approve, it saves a 'token.json' file - that's the credential file the app uses going forward.
 
 Usage:
-    cd C:\Users\Prabhu\Downloads\Valisure1\backend
+    cd backend
     python setup_google_drive.py
 """
 import os

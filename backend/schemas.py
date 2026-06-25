@@ -124,6 +124,31 @@ class UserResponse(BaseModel):
     created_at: Optional[datetime] = None
     last_login: Optional[datetime] = None
     role: Optional[dict] = None
+
+    @classmethod
+    def from_orm(cls, obj):
+        data = {
+            "id": obj.id,
+            "username": obj.username,
+            "email": obj.email,
+            "phone": obj.phone,
+            "department": obj.department,
+            "title": obj.title,
+            "status": obj.status,
+            "created_at": obj.created_at,
+            "last_login": obj.last_login,
+            "role": None,
+        }
+        # Resolve role from the relationship
+        role_obj = getattr(obj, "role", None)
+        if role_obj is not None:
+            data["role"] = {
+                "id": role_obj.id,
+                "name": role_obj.name,
+                "permission_level": role_obj.permission_level,
+            }
+        return cls(**data)
+
     class Config:
         orm_mode = True
 

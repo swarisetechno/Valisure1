@@ -14,7 +14,7 @@ source venv/bin/activate
 export PYTHONPATH=$(pwd)
 
 echo "Starting Celery worker..."
-echo "- Broker: redis://localhost:6379/0"
+echo "- Broker: redis://localhost:6380/0"
 echo "- Concurrency: 4 workers (Unix/Linux only)"
 echo ""
 

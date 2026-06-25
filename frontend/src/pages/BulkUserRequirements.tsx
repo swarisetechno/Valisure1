@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, Plus, Moon, Sun, LogOut, LayoutDashboard, FolderOpen, FileText, Upload, Download, ArrowLeft, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, Moon, Sun, LogOut, LayoutDashboard, FolderOpen, FileText, Upload, Download, ArrowLeft, CheckCircle, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { projectApi, documentApi } from '../services/api';
 
@@ -275,11 +275,13 @@ export default function BulkUserRequirements() {
     <div className={`min-h-screen ${darkMode ? "bg-[#DAE0F1]" : "bg-gray-100"}`}>
       {/* Sidebar */}
       <aside className={`fixed left-0 top-0 h-screen bg-[#1D2749] transition-all duration-300 z-40 ${sidebarOpen ? "w-64" : "w-24"}`}>
-        <div className={`flex items-center border-b border-[#6D81C5] px-5 py-6 ${sidebarOpen ? "justify-between" : "justify-center"}`}>
+        <div className={`flex items-center justify-center border-b border-[#6D81C5] px-5 h-20`}>
           {sidebarOpen && <h1 className="text-white font-bold text-lg">ValiSure</h1>}
-          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#91A1D4]">
-            <span className="text-white font-bold text-sm">VS</span>
-          </div>
+          {!sidebarOpen && (
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full bg-[#91A1D4]`}>
+              <span className="text-white font-bold text-sm">VS</span>
+            </div>
+          )}
         </div>
 
         <nav className={`flex flex-col gap-3 ${sidebarOpen ? "px-7 py-10" : "px-3 py-10"}`}>
@@ -296,9 +298,6 @@ export default function BulkUserRequirements() {
           </button>
           {sidebarOpen && expandedMenu.projects && (
             <div className="pl-12 pr-2 py-3">
-              {selectedProject && (
-                <p className="text-xs text-[#91A1D4] font-semibold mb-2 truncate">📁 {selectedProject.name}</p>
-              )}
               <select
                 value={selectedProject?.id || ''}
                 onChange={(e) => {
@@ -357,7 +356,9 @@ export default function BulkUserRequirements() {
               <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, {localStorage.getItem("userName") || "Author"}</p>
               <p className="text-xs text-gray-300">{selectedProject ? selectedProject.name : "No project"} — {selectedArtifact}</p>
             </div>
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277]"></div>
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277] flex items-center justify-center">
+              <User size={16} className="text-white" />
+            </div>
           </div>
         </header>
 

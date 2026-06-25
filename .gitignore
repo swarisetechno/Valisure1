@@ -43,3 +43,16 @@ Thumbs.db
 
 # Package manager
 bun.lock
+
+# Python cache and temporary files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+PROGRESS_TABLE.md
+
+
+

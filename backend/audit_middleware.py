@@ -42,13 +42,8 @@ def _get_audit_session_factory():
         try:
             from sqlalchemy import create_engine
             from sqlalchemy.orm import sessionmaker
-            from dotenv import load_dotenv
-            load_dotenv()
-            db_url = (
-                f"postgresql+psycopg://{os.getenv('DB_USER')}:{os.getenv('DB_PASS')}"
-                f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
-            )
-            _engine = create_engine(db_url, pool_pre_ping=True, pool_size=5, max_overflow=10)
+            from db_config import DATABASE_URL
+            _engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=5, max_overflow=10)
             _audit_Session = sessionmaker(bind=_engine)
             logger.info("Audit direct-write DB session factory initialized")
         except Exception as e:
