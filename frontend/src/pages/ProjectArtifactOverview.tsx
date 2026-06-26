@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, Plus, Moon, Sun, LogOut, LayoutDashboard, FolderOpen, FileText, Search, X, MoreVertical, AlertCircle, CheckCircle2, Eye, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, Moon, Sun, LogOut, LayoutDashboard, FolderOpen, FileText, Search, X, MoreVertical, AlertCircle, CheckCircle2, Eye, User, BookOpen } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { projectApi, documentApi } from '../services/api';
 
@@ -134,6 +134,72 @@ export default function ProjectArtifactOverview() {
     try { return JSON.parse(localStorage.getItem(`requirementsData_${pid}`) || '[]'); }
     catch { return []; }
   });
+
+  // Common Requirements modal states
+  const [showCommonReqsModal, setShowCommonReqsModal] = useState(false);
+  const [commonReqs, setCommonReqs] = useState<any[]>([]);
+  const [selectedCommonReqIds, setSelectedCommonReqIds] = useState<string[]>([]);
+
+  // Load common requirements from localStorage when modal is opened
+  useEffect(() => {
+    if (showCommonReqsModal) {
+      try {
+        const stored = localStorage.getItem('commonRequirementsData');
+        if (stored) {
+          setCommonReqs(JSON.parse(stored));
+        } else {
+          setCommonReqs([]);
+        }
+      } catch {
+        setCommonReqs([]);
+      }
+    }
+  }, [showCommonReqsModal]);
+
+  const handleAddCommonReqsToProject = () => {
+    if (selectedCommonReqIds.length === 0) {
+      alert('Please select at least one requirement to add.');
+      return;
+    }
+
+    const pid = selectedProject?.id || incomingProjectData?.id || 'PROJ001';
+    const key = `requirementsData_${pid}`;
+    let existing = [];
+    try {
+      existing = JSON.parse(localStorage.getItem(key) || '[]');
+    } catch {
+      existing = [];
+    }
+
+    const toAdd = commonReqs.filter(cr => selectedCommonReqIds.includes(cr.id));
+    
+    const newRequirements = toAdd.map((cr, index) => {
+      const counter = existing.length + index + 1;
+      const ursId = `URS_${String(counter).padStart(3, '0')}`;
+      return {
+        id: ursId,
+        title: cr.title,
+        description: cr.description,
+        ursEnhanced: cr.ursEnhanced || cr.description,
+        gxp: cr.gxp || 'Yes',
+        gxpReference: cr.gxpReference || '',
+        risk: cr.risk || 'Medium',
+        riskLevel: cr.riskLevel || 'Risk - 2',
+        testing: cr.testing || 'Unscripted',
+        status: 'Draft',
+        versions: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    });
+
+    const updated = [...existing, ...newRequirements];
+    localStorage.setItem(key, JSON.stringify(updated));
+    setRequirementsData(updated);
+    setShowCommonReqsModal(false);
+    setSelectedCommonReqIds([]);
+    alert(`Successfully added ${newRequirements.length} requirement(s) to this project!`);
+  };
 
   // Reload requirements whenever the active project changes
   useEffect(() => {
@@ -437,6 +503,13 @@ export default function ProjectArtifactOverview() {
                     <Plus size={18} />
                     Add Requirement
                   </button>
+                  <button
+                    onClick={() => setShowCommonReqsModal(true)}
+                    className="flex items-center gap-2 bg-[#3A4E92] text-white px-6 py-3 rounded-full hover:bg-[#4a5f9f] transition font-semibold whitespace-nowrap"
+                  >
+                    <BookOpen size={18} />
+                    Common Requirements
+                  </button>
                   <button className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-full hover:bg-green-700 transition font-semibold whitespace-nowrap">
                     <Eye size={18} />
                     Document Viewer
@@ -669,6 +742,153 @@ export default function ProjectArtifactOverview() {
             {activeTab === 'User Requirement Specification' && (
               <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
                 <p className="text-gray-600">User Requirement Specification content will be displayed here.</p>
+              </div>
+            )}
+
+            {/* Common Requirements Selector Modal */}
+            {showCommonReqsModal && (
+              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-xl border border-gray-200 max-w-6xl w-full max-h-[90vh] overflow-y-auto flex flex-col">
+                  {/* Modal Header */}
+                  <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <BookOpen size={24} className="text-[#3A4E92]" />
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900">Select Common Requirements</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">Select global requirements to import into this project</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setShowCommonReqsModal(false);
+                        setSelectedCommonReqIds([]);
+                      }}
+                      className="text-gray-400 hover:text-gray-600 transition text-lg font-bold"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Modal Body */}
+                  <div className="p-8 overflow-y-auto flex-1">
+                    {commonReqs.length === 0 ? (
+                      <div className="text-center py-16 text-gray-400">
+                        <BookOpen size={48} className="mx-auto mb-3 opacity-30" />
+                        <p className="text-base font-semibold text-gray-700">No Common Requirements Available</p>
+                        <p className="text-xs mt-1 text-gray-500">Go to Author Dashboard → Common Requirements to manually add them first.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                        <table className="w-full">
+                          <thead className="bg-white border-b border-gray-300">
+                            <tr className="text-sm font-bold text-gray-900">
+                              <th className="px-6 py-4 text-center w-12">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedCommonReqIds.length === commonReqs.length}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedCommonReqIds(commonReqs.map(r => r.id));
+                                    } else {
+                                      setSelectedCommonReqIds([]);
+                                    }
+                                  }}
+                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                              </th>
+                              <th className="px-6 py-4 text-left">URS ID</th>
+                              <th className="px-6 py-4 text-left">URS Title</th>
+                              <th className="px-6 py-4 text-left">URS Description</th>
+                              <th className="px-6 py-4 text-left">GxP (Y/N)</th>
+                              <th className="px-6 py-4 text-left">GxP Risk</th>
+                              <th className="px-6 py-4 text-left">Risk Level</th>
+                              <th className="px-6 py-4 text-left">Testing Approach</th>
+                              <th className="px-6 py-4 text-center">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {commonReqs.map((cr) => {
+                              const isChecked = selectedCommonReqIds.includes(cr.id);
+                              return (
+                                <tr 
+                                  key={cr.id} 
+                                  className={`text-sm relative transition hover:bg-gray-50 cursor-pointer ${isChecked ? 'bg-blue-50/30 hover:bg-blue-50/50' : ''}`}
+                                  onClick={() => {
+                                    if (isChecked) {
+                                      setSelectedCommonReqIds(prev => prev.filter(id => id !== cr.id));
+                                    } else {
+                                      setSelectedCommonReqIds(prev => [...prev, cr.id]);
+                                    }
+                                  }}
+                                >
+                                  <td className="px-6 py-4 text-center" onClick={e => e.stopPropagation()}>
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedCommonReqIds(prev => [...prev, cr.id]);
+                                        } else {
+                                          setSelectedCommonReqIds(prev => prev.filter(id => id !== cr.id));
+                                        }
+                                      }}
+                                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                  </td>
+                                  <td className="px-6 py-4 text-gray-900 font-semibold">{cr.id}</td>
+                                  <td className="px-6 py-4 text-gray-900 font-semibold">{cr.title}</td>
+                                  <td className="px-6 py-4 text-gray-600">{cr.ursEnhanced || cr.description}</td>
+                                  <td className="px-6 py-4 text-left">
+                                    <span className={`px-4 py-2 rounded-full text-sm font-semibold border-2 ${cr.gxp === 'Yes' ? 'border-blue-400 text-blue-700 bg-blue-50' : 'border-gray-400 text-gray-700 bg-gray-50'}`}>
+                                      {cr.gxp || '—'}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 text-left">
+                                    <span className={`px-4 py-2 rounded-lg text-sm font-semibold ${getRiskColor(cr.risk)}`}>
+                                      {cr.risk || '—'}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 text-left text-gray-900 font-semibold">{cr.riskLevel || '—'}</td>
+                                  <td className="px-6 py-4 text-left text-gray-900 font-semibold">{cr.testing || '—'}</td>
+                                  <td className="px-6 py-4 text-left">
+                                    <span className={`w-full block text-center px-5 py-2 rounded-full text-sm font-semibold text-white ${['Submitted', 'Approved', 'Finalized'].includes(cr.status) ? 'bg-green-600' : 'bg-amber-500'}`}>
+                                      {cr.status || 'Draft'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex items-center justify-between rounded-b-2xl">
+                    <span className="text-xs text-gray-500 font-semibold">
+                      {selectedCommonReqIds.length} requirement(s) selected
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          setShowCommonReqsModal(false);
+                          setSelectedCommonReqIds([]);
+                        }}
+                        className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-100 transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleAddCommonReqsToProject}
+                        disabled={selectedCommonReqIds.length === 0}
+                        className={`px-6 py-2.5 rounded-lg text-sm font-semibold text-white transition ${selectedCommonReqIds.length === 0 ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                      >
+                        Add to Project
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>

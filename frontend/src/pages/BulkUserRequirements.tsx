@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, Plus, Moon, Sun, LogOut, LayoutDashboard, FolderOpen, FileText, Upload, Download, ArrowLeft, CheckCircle, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, Moon, Sun, LogOut, LayoutDashboard, FolderOpen, FileText, Upload, Download, ArrowLeft, CheckCircle, User, BookOpen } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { projectApi, documentApi } from '../services/api';
 
@@ -11,6 +11,7 @@ export default function BulkUserRequirements() {
   const [expandedMenu, setExpandedMenu] = useState({ projects: true, artifacts: true });
 
   // ── Read project and artifact from navigation state ────────────────
+  const isCommon = location.state?.isCommon || false;
   const incomingProject = location.state?.projectData || null;
   const incomingArtifact = location.state?.selectedArtifact || 'URS - User Request Specification';
 
@@ -44,6 +45,13 @@ export default function BulkUserRequirements() {
 
   // ── Auto-generate URS ID scoped to this project ────────────────────
   const generateUrsId = () => {
+    if (isCommon) {
+      try {
+        const existing = JSON.parse(localStorage.getItem('commonRequirementsData') || '[]');
+        const counter = existing.length + 1;
+        return `URS_CR_${String(counter).padStart(3, '0')}`;
+      } catch { return 'URS_CR_001'; }
+    }
     const pid = selectedProject?.id || incomingProject?.id || 'PROJ001';
     try {
       const existing = JSON.parse(localStorage.getItem(`requirementsData_${pid}`) || '[]');
@@ -140,6 +148,47 @@ export default function BulkUserRequirements() {
       alert('Please fill in URS Title and URS Requirements');
       return;
     }
+
+    if (isCommon) {
+      const key = 'commonRequirementsData';
+      try {
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        const ursId = formData.ursId || generateUrsId();
+
+        const newRequirement = {
+          id: ursId,
+          title: formData.ursTitle,
+          description: formData.ursDescription,
+          ursEnhanced: formData.ursEnhanced,
+          gxp: gxpData.gxpYesNo || 'Yes',
+          gxpReference: gxpData.gxpReference,
+          risk: gxpData.gxpRisk || 'Medium',
+          riskLevel: gxpData.gxpRiskLevel || 'Risk - 2',
+          testing: gxpData.testingApproach || 'Unscripted',
+          status: status,
+          versions: versions,
+          createdAt: editingId
+            ? (existing.find((r: any) => r.id === editingId)?.createdAt || new Date().toISOString())
+            : new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          projectName: 'Common Pool',
+          projectId: 'COMMON'
+        };
+
+        let updated = editingId ? existing.filter((r: any) => r.id !== editingId) : existing;
+        updated.unshift(newRequirement);
+        localStorage.setItem(key, JSON.stringify(updated));
+
+        navigate("/author-dashboard", {
+          state: { activeView: 'common-requirements' }
+        });
+      } catch (error) {
+        console.error('Error saving common requirement:', error);
+        alert('Failed to save common requirement');
+      }
+      return;
+    }
+
     const projectId = selectedProject?.id || incomingProject?.id || 'PROJ001';
     const key = `requirementsData_${projectId}`;
     console.log('[handleSubmit] Using Project ID:', projectId);
@@ -148,7 +197,7 @@ export default function BulkUserRequirements() {
       const existing = JSON.parse(localStorage.getItem(key) || '[]');
       const ursId = formData.ursId || generateUrsId();
 
-      const newRequirement = {
+      const newRequirement: any = {
         id: ursId,
         title: formData.ursTitle,
         description: formData.ursDescription,
@@ -290,46 +339,62 @@ export default function BulkUserRequirements() {
             {sidebarOpen && <span className="text-sm font-medium">Author Dashboard</span>}
           </button>
 
-          {/* Projects */}
-          <button onClick={() => setExpandedMenu(p => ({ ...p, projects: !p.projects }))} className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`} title="Projects">
-            <FolderOpen size={20} />
-            {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Projects</span>}
-            {sidebarOpen && <ChevronDown size={18} className={`transition-transform ${expandedMenu.projects ? "rotate-180" : ""}`} />}
-          </button>
-          {sidebarOpen && expandedMenu.projects && (
-            <div className="pl-12 pr-2 py-3">
-              <select
-                value={selectedProject?.id || ''}
-                onChange={(e) => {
-                  const p = projects.find(p => String(p.id) === String(e.target.value));
-                  setSelectedProject(p || null);
-                }}
-                className="w-full bg-[#2d3a5a] border border-[#6D81C5] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#91A1D4] transition"
-              >
-                <option value="">Choose project</option>
-                {projects.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+          {isCommon ? (
+            <div className={`flex flex-col gap-2 rounded-lg px-4 py-3 bg-[#3A4E92]/30 border border-[#6D81C5]/30 text-white ${!sidebarOpen ? 'items-center justify-center' : ''}`}>
+              <div className="flex items-center gap-3">
+                <BookOpen size={20} className="text-[#91A1D4]" />
+                {sidebarOpen && <span className="text-sm font-semibold">Global Common Pool</span>}
+              </div>
+              {sidebarOpen && (
+                <p className="text-xs text-[#DAE0F1] mt-1 leading-relaxed">
+                  You are editing the shared pool of common requirements.
+                </p>
+              )}
             </div>
-          )}
+          ) : (
+            <>
+              {/* Projects */}
+              <button onClick={() => setExpandedMenu(p => ({ ...p, projects: !p.projects }))} className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`} title="Projects">
+                <FolderOpen size={20} />
+                {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Projects</span>}
+                {sidebarOpen && <ChevronDown size={18} className={`transition-transform ${expandedMenu.projects ? "rotate-180" : ""}`} />}
+              </button>
+              {sidebarOpen && expandedMenu.projects && (
+                <div className="pl-12 pr-2 py-3">
+                  <select
+                    value={selectedProject?.id || ''}
+                    onChange={(e) => {
+                      const p = projects.find(p => String(p.id) === String(e.target.value));
+                      setSelectedProject(p || null);
+                    }}
+                    className="w-full bg-[#2d3a5a] border border-[#6D81C5] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#91A1D4] transition"
+                  >
+                    <option value="">Choose project</option>
+                    {projects.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+              )}
 
-          {/* Artifacts — selected one highlighted */}
-          <button onClick={() => setExpandedMenu(p => ({ ...p, artifacts: !p.artifacts }))} className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`} title="Artifacts">
-            <FileText size={20} />
-            {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Artifacts</span>}
-            {sidebarOpen && <ChevronDown size={18} className={`transition-transform ${expandedMenu.artifacts ? "rotate-180" : ""}`} />}
-          </button>
-          {sidebarOpen && expandedMenu.artifacts && (
-            <div className="flex flex-col gap-1 pl-12 pr-2 py-2 max-h-72 overflow-y-auto">
-              {getArtifactsForProject().map((artifact) => (
-                <button
-                  key={artifact.id}
-                  className={`flex items-center justify-between text-xs transition py-2 px-2 rounded text-left ${artifact.name === selectedArtifact ? 'bg-[#3A4E92] text-white font-semibold' : 'text-gray-300 hover:text-white hover:bg-[#2d3a5a]'}`}
-                >
-                  <span className="truncate flex-1">{artifact.name}</span>
-                  {!artifact.checked && <Plus size={14} className="text-orange-400 flex-shrink-0 ml-2" />}
-                </button>
-              ))}
-            </div>
+              {/* Artifacts — selected one highlighted */}
+              <button onClick={() => setExpandedMenu(p => ({ ...p, artifacts: !p.artifacts }))} className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#2d3a5a] transition w-full ${!sidebarOpen ? "justify-center" : ""}`} title="Artifacts">
+                <FileText size={20} />
+                {sidebarOpen && <span className="text-sm font-medium flex-1 text-left">Artifacts</span>}
+                {sidebarOpen && <ChevronDown size={18} className={`transition-transform ${expandedMenu.artifacts ? "rotate-180" : ""}`} />}
+              </button>
+              {sidebarOpen && expandedMenu.artifacts && (
+                <div className="flex flex-col gap-1 pl-12 pr-2 py-2 max-h-72 overflow-y-auto">
+                  {getArtifactsForProject().map((artifact) => (
+                    <button
+                      key={artifact.id}
+                      className={`flex items-center justify-between text-xs transition py-2 px-2 rounded text-left ${artifact.name === selectedArtifact ? 'bg-[#3A4E92] text-white font-semibold' : 'text-gray-300 hover:text-white hover:bg-[#2d3a5a]'}`}
+                    >
+                      <span className="truncate flex-1">{artifact.name}</span>
+                      {!artifact.checked && <Plus size={14} className="text-orange-400 flex-shrink-0 ml-2" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </nav>
 
@@ -354,7 +419,7 @@ export default function BulkUserRequirements() {
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-end">
               <p className="text-sm font-semibold text-[#F7F7F7]">Welcome, {localStorage.getItem("userName") || "Author"}</p>
-              <p className="text-xs text-gray-300">{selectedProject ? selectedProject.name : "No project"} — {selectedArtifact}</p>
+              <p className="text-xs text-gray-300">{isCommon ? "Global Common Pool" : `${selectedProject ? selectedProject.name : "No project"} — ${selectedArtifact}`}</p>
             </div>
             <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full border-2 border-[#FAC277] flex items-center justify-center">
               <User size={16} className="text-white" />
@@ -379,16 +444,23 @@ export default function BulkUserRequirements() {
             )}
 
             <div className="flex items-center gap-3 mb-6 text-gray-600">
-              <button onClick={() => navigate(-1)} className="flex items-center gap-2 hover:text-gray-900 transition">
+              <button
+                onClick={() => isCommon ? navigate('/author-dashboard', { state: { activeView: 'common-requirements' } }) : navigate(-1)}
+                className="flex items-center gap-2 hover:text-gray-900 transition"
+              >
                 <ArrowLeft size={16} />
-                <span className="text-sm">Back to Requirements</span>
+                <span className="text-sm">{isCommon ? 'Back to Common Requirements' : 'Back to Requirements'}</span>
               </button>
             </div>
 
             <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              {editingId ? 'Edit Requirement' : 'Add User Requirements'}
+              {isCommon ? (editingId ? 'Edit Common Requirement' : 'Add Common Requirement') : (editingId ? 'Edit Requirement' : 'Add User Requirements')}
             </h1>
-            {selectedProject && (
+            {isCommon ? (
+              <p className="text-sm text-gray-500 mb-8">
+                Global Pool: <strong>Common Pool</strong>
+              </p>
+            ) : selectedProject && (
               <p className="text-sm text-gray-500 mb-8">
                 Project: <strong>{selectedProject.name}</strong> — Artifact: <strong>{selectedArtifact}</strong>
               </p>
@@ -553,7 +625,12 @@ export default function BulkUserRequirements() {
                   </button>
                 )}
                 <div className="flex gap-4">
-                  <button onClick={() => navigate(-1)} className="px-8 py-2 border-2 border-gray-400 text-gray-700 rounded-full font-semibold hover:bg-gray-100 transition">Cancel</button>
+                  <button
+                    onClick={() => isCommon ? navigate('/author-dashboard', { state: { activeView: 'common-requirements' } }) : navigate(-1)}
+                    className="px-8 py-2 border-2 border-gray-400 text-gray-700 rounded-full font-semibold hover:bg-gray-100 transition"
+                  >
+                    Cancel
+                  </button>
                   <button onClick={() => handleSubmit(showGxPBox ? 'Submitted' : 'Draft')} className="px-8 py-2 bg-[#1D2749] text-white rounded-full font-semibold hover:bg-[#11172B] transition">
                     {editingId ? 'Update' : 'Submit'}
                   </button>

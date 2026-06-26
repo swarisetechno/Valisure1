@@ -6,6 +6,10 @@ This is a summary of the layout, data flow, database configuration, and file str
 - **Dashboard Layout Alignment**: Updated the **Author Dashboard** welcome banner, sidebar navigation, user selection, pagination footers, and table columns to match the styling and architecture of the **Admin Dashboard** exactly.
 - **Corrupt Unicode Icons Replaced**: Replaced broken pagination arrows and view symbols with clean, standard SVG icons from `lucide-react` (`ChevronLeft`, `ChevronRight`, `Eye`).
 - **Date Rendering Bug Fixed**: Resolved the project table "Created on - " blank date bug by aligning frontend payload date mappings with the backend SQL `created_at` timestamp.
+- **Decoupled Common Requirements**: Separated global common requirements from individual project specifications, storing them in a shared pool (`commonRequirementsData`) in `localStorage` with automated sequential ID generation (`URS_CR_xxx`).
+- **Refined Bulk URS UI & Routing**: Unified the creation and edit flow through the Bulk URS page, conditionalizing page headers, breadcrumbs, sidebar widgets, and cancel/submit redirects to preserve dashboard state.
+- **Selector Modal Layout Alignment**: Realigned the selector popup table with the main URS table by adding the *Testing Approach* and *Status* columns, fixing cell text truncation, and expanding the modal's width to `max-w-6xl`.
+- **Import Mapping Bug Fix**: Patched the import logic to preserve AI-enhanced descriptions (`ursEnhanced`) instead of fallback-copying raw descriptions.
 
 ## 💾 2. Unified Database Setup & Migrations
 - **Single Script Database Setup**: Introduced `backend/setup_db.py` to handle all database setups. Running `python setup_db.py` once now automatically:

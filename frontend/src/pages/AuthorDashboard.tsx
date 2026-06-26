@@ -4,7 +4,7 @@ import {
   Search, Moon, Sun, ChevronLeft, ChevronDown, Plus,
   BookOpen, User,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { projectApi } from '../services/api';
 
 // â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -27,10 +27,13 @@ interface CommonRequirement {
 
 export default function AuthorDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
   const [selectedProject, setSelectedProject] = useState<any>(null);
-  const [activeView, setActiveView] = useState<'dashboard' | 'common-requirements'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'common-requirements'>(() => {
+    return location.state?.activeView || 'dashboard';
+  });
   const [expandedMenu, setExpandedMenu] = useState({
     projects: false,
     artifacts: false,
@@ -41,6 +44,34 @@ export default function AuthorDashboard() {
   // ── Common Requirements state ──────────────────────────────────────
   const [commonReqs, setCommonReqs] = useState<CommonRequirement[]>([]);
   const [crsSearch, setCrsSearch] = useState('');
+  
+  const handleOpenAddModal = () => {
+    navigate('/bulk-user-requirements', { state: { isCommon: true } });
+  };
+
+  const handleOpenEditModal = (req: CommonRequirement) => {
+    navigate('/bulk-user-requirements', { state: { isCommon: true, draftData: req } });
+  };
+
+  const handleDeleteCommonReq = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this common requirement?')) return;
+    const updatedList = commonReqs.filter(r => r.id !== id);
+    setCommonReqs(updatedList);
+    localStorage.setItem('commonRequirementsData', JSON.stringify(updatedList));
+  };
+
+  // Load common requirements on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('commonRequirementsData');
+      if (stored) {
+        setCommonReqs(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error('Error loading common requirements:', e);
+    }
+  }, []);
 
   // ── Projects fetch ────────────────────────────────────────────────
   useEffect(() => {
@@ -48,31 +79,6 @@ export default function AuthorDashboard() {
       .then(res => { if (res?.projects) setProjects(res.projects); })
       .catch(console.error);
   }, []);
-
-  // Aggregate user requirements from all projects
-  useEffect(() => {
-    const aggregated: CommonRequirement[] = [];
-    projects.forEach(proj => {
-      try {
-        const stored = localStorage.getItem(`requirementsData_${proj.id}`);
-        if (stored) {
-          const reqs = JSON.parse(stored);
-          if (Array.isArray(reqs)) {
-            reqs.forEach((r: any) => {
-              aggregated.push({
-                ...r,
-                projectName: proj.name,
-                projectId: proj.id
-              });
-            });
-          }
-        }
-      } catch (e) {
-        console.error(`Error parsing requirements for project ${proj.id}:`, e);
-      }
-    });
-    setCommonReqs(aggregated);
-  }, [projects]);
 
   // ── Artifacts list ────────────────────────────────────────────────
   const csvArtifacts = [
@@ -351,7 +357,7 @@ export default function AuthorDashboard() {
             <div className="mb-6">
               <h2 className="text-3xl font-bold text-gray-900">Common Requirements</h2>
               <p className="text-sm text-gray-500 mt-1">
-                All user requirements across all projects — {commonReqs.length} total
+                Create and manage common requirements pool for all projects — {commonReqs.length} total
               </p>
             </div>
 
@@ -361,13 +367,20 @@ export default function AuthorDashboard() {
                 <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border-2 border-blue-100 rounded-lg">
                   <BookOpen size={16} className="text-[#3A4E92]" />
                   <span className="text-sm font-semibold text-[#1D2749]">
-                    {commonReqs.length} Requirement{commonReqs.length !== 1 ? 's' : ''} across {projects.length} Project{projects.length !== 1 ? 's' : ''}
+                    {commonReqs.length} Common Requirement{commonReqs.length !== 1 ? 's' : ''}
                   </span>
                 </div>
+                <button
+                  onClick={handleOpenAddModal}
+                  className="flex items-center gap-2 bg-[#1D2749] text-white px-5 py-2.5 rounded-full hover:bg-[#2d3a5a] transition font-semibold text-sm whitespace-nowrap"
+                >
+                  <Plus size={16} />
+                  Add Common Req
+                </button>
                 <div className="ml-auto flex items-center gap-2 bg-blue-50 px-5 py-2 rounded-full border-2 border-blue-200">
                   <input
                     type="text"
-                    placeholder="Search by ID, title, project…"
+                    placeholder="Search by ID, title…"
                     value={crsSearch}
                     onChange={e => setCrsSearch(e.target.value)}
                     className="bg-transparent px-2 py-1 text-sm focus:outline-none w-52 placeholder-gray-500 text-gray-700"
@@ -379,17 +392,17 @@ export default function AuthorDashboard() {
               {/* Table */}
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead style={{ backgroundColor: '#B8C5E0' }}>
-                    <tr className="text-xs font-bold uppercase tracking-wide text-gray-700">
-                      <th className="px-5 py-4 text-left">URS ID</th>
-                      <th className="px-5 py-4 text-left">Project Name</th>
-                      <th className="px-5 py-4 text-left">URS Title</th>
-                      <th className="px-5 py-4 text-left">URS Description</th>
-                      <th className="px-5 py-4 text-left">GxP (Y/N)</th>
-                      <th className="px-5 py-4 text-left">GxP Risk</th>
-                      <th className="px-5 py-4 text-left">Risk Level</th>
-                      <th className="px-5 py-4 text-left">Testing Approach</th>
-                      <th className="px-5 py-4 text-center">Status</th>
+                  <thead className="bg-white border-b border-gray-300">
+                    <tr className="text-sm font-bold text-gray-900">
+                      <th className="px-6 py-4 text-left">URS ID</th>
+                      <th className="px-6 py-4 text-left">URS Title</th>
+                      <th className="px-6 py-4 text-left">URS Description</th>
+                      <th className="px-6 py-4 text-left">GxP (Y/N)</th>
+                      <th className="px-6 py-4 text-left">GxP Risk</th>
+                      <th className="px-6 py-4 text-left">Risk Level</th>
+                      <th className="px-6 py-4 text-left">Testing Approach</th>
+                      <th className="px-6 py-4 text-center">Status</th>
+                      <th className="px-6 py-4 text-center">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -400,7 +413,7 @@ export default function AuthorDashboard() {
                           <p className="text-sm font-medium text-gray-600">No requirements found</p>
                           <p className="text-xs mt-1 text-gray-400">
                             {commonReqs.length === 0
-                              ? 'Add user requirements via Projects → Artifacts → URS to see them here'
+                              ? 'Click "Add Common Req" above to manually add requirements to the global pool.'
                               : 'No results match your search'}
                           </p>
                         </td>
@@ -409,43 +422,45 @@ export default function AuthorDashboard() {
                       filteredCommonReqs.map((req) => (
                         <tr
                           key={req.id}
-                          onClick={() => {
-                            const proj = projects.find(p => String(p.id) === String(req.projectId));
-                            if (proj) {
-                              navigate('/project-artifact-overview', { state: { projectData: proj, selectedArtifact: 'URS - User Request Specification' } });
-                            }
-                          }}
-                          className="hover:bg-blue-50/50 cursor-pointer transition-colors text-sm"
-                          title="Click to view requirement in project"
+                          onClick={() => handleOpenEditModal(req)}
+                          className={`text-sm relative transition ${req.status === 'Draft' ? 'hover:bg-blue-50' : 'hover:bg-gray-50'}`}
+                          title="Click to edit common requirement"
                         >
                           <td className="px-6 py-4 text-gray-900 font-semibold">{req.id}</td>
-                          <td className="px-6 py-4 text-gray-900 font-semibold max-w-[150px]">
-                            <span className="truncate block" title={req.projectName}>{req.projectName}</span>
-                          </td>
-                          <td className="px-6 py-4 text-gray-900 font-semibold max-w-[160px]">
-                            <span className="truncate block" title={req.title}>{req.title}</span>
-                          </td>
-                          <td className="px-6 py-4 text-gray-600 max-w-[200px]">
-                            <span className="line-clamp-2 block" title={req.ursEnhanced || req.description}>
-                              {req.ursEnhanced || req.description}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 ${req.gxp === 'Yes' ? 'border-blue-400 text-blue-700 bg-blue-50' : 'border-gray-300 text-gray-700 bg-gray-50'}`}>
+                          <td className="px-6 py-4 text-gray-900 font-semibold">{req.title}</td>
+                          <td className="px-6 py-4 text-gray-600">{req.ursEnhanced || req.description}</td>
+                          <td className="px-6 py-4 text-left">
+                            <span className={`px-4 py-2 rounded-full text-sm font-semibold border-2 ${req.gxp === 'Yes' ? 'border-blue-400 text-blue-700 bg-blue-50' : 'border-gray-400 text-gray-700 bg-gray-50'}`}>
                               {req.gxp || '—'}
                             </span>
                           </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${req.risk ? getRiskColor(req.risk) : 'text-gray-400'}`}>
+                          <td className="px-6 py-4 text-left">
+                            <span className={`px-4 py-2 rounded-lg text-sm font-semibold ${getRiskColor(req.risk)}`}>
                               {req.risk || '—'}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-gray-900 font-medium">{req.riskLevel || '—'}</td>
-                          <td className="px-6 py-4 text-gray-900 font-medium">{req.testing || '—'}</td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`inline-block px-4 py-1.5 rounded-full text-xs font-semibold ${getReqStatusColor(req.status)}`}>
+                          <td className="px-6 py-4 text-left text-gray-900 font-semibold">{req.riskLevel || '—'}</td>
+                          <td className="px-6 py-4 text-left text-gray-900 font-semibold">{req.testing || '—'}</td>
+                          <td className="px-6 py-4 text-left">
+                            <span className={`w-full block text-center px-5 py-2 rounded-full text-sm font-semibold text-white ${['Submitted', 'Approved', 'Finalized'].includes(req.status) ? 'bg-green-600' : 'bg-amber-500'}`}>
                               {req.status}
                             </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex items-center justify-center gap-2" onClick={e => e.stopPropagation()}>
+                              <button
+                                onClick={() => handleOpenEditModal(req)}
+                                className="text-blue-600 hover:text-blue-800 font-semibold text-xs border border-blue-200 px-2.5 py-1 rounded hover:bg-blue-50 transition"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={(e) => handleDeleteCommonReq(req.id, e)}
+                                className="text-red-600 hover:text-red-800 font-semibold text-xs border border-red-200 px-2.5 py-1 rounded hover:bg-red-50 transition"
+                              >
+                                Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -472,6 +487,8 @@ export default function AuthorDashboard() {
                 </div>
               )}
             </div>
+
+
           </main>
         )}
       </div>
