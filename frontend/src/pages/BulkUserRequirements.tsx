@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, Plus, Moon, Sun, LogOut, LayoutDashboard, FolderOpen, FileText, Upload, Download, ArrowLeft, CheckCircle, User, BookOpen } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { projectApi, documentApi } from '../services/api';
+import { projectApi, documentApi, aiApi } from '../services/api';
 
 export default function BulkUserRequirements() {
   const navigate = useNavigate();
@@ -32,6 +32,7 @@ export default function BulkUserRequirements() {
   const [versions, setVersions] = useState<Array<{id: number, content: string, timestamp: string}>>([]);
   const [selectedVersionId, setSelectedVersionId] = useState<number | null>(null);
   const [showToast, setShowToast] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const [gxpData, setGxpData] = useState({
     gxpYesNo: '',
@@ -283,30 +284,48 @@ export default function BulkUserRequirements() {
     }
   };
 
-  const refineContent = (text: string) => {
-    const cleanText = text.trim();
-    const capitalizedText = cleanText.charAt(0).toUpperCase() + cleanText.slice(1).toLowerCase();
-    return `The system shall provide ${capitalizedText} with full traceability and audit trail capabilities to ensure regulatory compliance.`;
+  const handleGenerate = async () => {
+    if (!formData.ursDescription.trim()) return;
+    setGenerating(true);
+    try {
+      const result = await aiApi.refineRequirement({
+        urs_id: formData.ursId || "URS_001",
+        title: formData.ursTitle || "Untitled Requirement",
+        description: formData.ursDescription,
+        project_id: selectedProject?.id || incomingProject?.id || undefined
+      });
+
+      const refinedContent = result.refined_content;
+      handleInputChange('ursEnhanced', refinedContent);
+      
+      setGxpData({
+        gxpYesNo: result.gxp_yes_no,
+        gxpReference: result.gxp_reference,
+        gxpRisk: result.gxp_risk,
+        gxpRiskLevel: result.gxp_risk_level,
+        testingApproach: result.testing_approach
+      });
+      setShowGxPBox(true); // Auto show GxP Box when generated
+
+      const newVersion = {
+        id: Date.now(),
+        content: refinedContent,
+        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      };
+      
+      setVersions(prev => [newVersion, ...prev]);
+      setSelectedVersionId(newVersion.id);
+      setShowToast(true);
+      
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (error: any) {
+      console.error("AI Generation error:", error);
+      alert("Failed to generate refined requirement using AI: " + (error?.message || error));
+    } finally {
+      setGenerating(false);
+    }
   };
 
-  const handleGenerate = () => {
-    if (!formData.ursDescription.trim()) return;
-    const refinedContent = refineContent(formData.ursDescription);
-    
-    handleInputChange('ursEnhanced', refinedContent);
-    
-    const newVersion = {
-      id: Date.now(),
-      content: refinedContent,
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-    };
-    
-    setVersions(prev => [newVersion, ...prev]);
-    setSelectedVersionId(newVersion.id);
-    setShowToast(true);
-    
-    setTimeout(() => setShowToast(false), 3000);
-  };
 
   const handleVersionClick = (versionId: number) => {
     setSelectedVersionId(versionId);
@@ -510,7 +529,27 @@ export default function BulkUserRequirements() {
                     </div>
                     <textarea placeholder="Enhanced description will appear here..." value={formData.ursEnhanced} onChange={(e) => handleInputChange('ursEnhanced', e.target.value)} className="w-full bg-blue-100 border-2 border-blue-200 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:outline-none resize-none flex-1 min-h-72" />
                     <div className="flex gap-3 pt-4">
-                      <button onClick={handleGenerate} className="flex-1 px-6 py-3 bg-gray-400 text-gray-800 rounded-lg font-semibold hover:bg-gray-500 transition">Generate</button>
+                      <button
+                        onClick={handleGenerate}
+                        disabled={generating || !formData.ursDescription.trim()}
+                        className={`flex-1 px-6 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
+                          generating || !formData.ursDescription.trim()
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-orange-500 text-white hover:bg-orange-600 shadow-md hover:shadow-lg'
+                        }`}
+                      >
+                        {generating ? (
+                          <>
+                            <svg className="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Generating...</span>
+                          </>
+                        ) : (
+                          "Generate"
+                        )}
+                      </button>
                       <button onClick={handleFinalize} className="flex-1 px-6 py-3 bg-[#3A4E92] text-white rounded-lg font-semibold hover:bg-[#2d3a5a] transition">Finalize</button>
                     </div>
 

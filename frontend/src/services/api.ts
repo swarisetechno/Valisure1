@@ -365,6 +365,18 @@ export const auditApi = {
   },
 };
 
+// ─── AI API ───────────────────────────────────────────────────
+export const aiApi = {
+  refineRequirement: async (data: { urs_id: string; title: string; description: string; project_id?: number }) => {
+    const response = await fetch(`${API_BASE_URL}/db/ai/refine-requirement`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+  },
+};
+
 // ─── Session Helpers ──────────────────────────────────────────
 export function saveAuthSession(token: string, user: any) {
   localStorage.setItem("authToken", token);

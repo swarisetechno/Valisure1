@@ -17,7 +17,7 @@ from schemas import (
     CreateRequest, AddUnderRequest, AddEndRequest, AddEntry,
     UpdateEntryByHeading, StageUpdateRequest, CreateHeadingRequest,
     UpdateHeadingContentRequest, GenerateHeadingContentRequest, UpdateHeadingStatusRequest,
-    CreateProjectRequest
+    CreateProjectRequest, RefineRequirementRequest
 )
 from user_routes import create_user_router
 from role_routes import create_role_router
@@ -536,23 +536,28 @@ class Controller:
 
 # -------------------- HELPERS --------------------
 def get_user_file_path(user: UserModel, filename: str, project_id: int = None):
-    user_dir = os.path.join(BASE_PATH, str(user.id))
-    os.makedirs(user_dir, exist_ok=True)
+    # Create the flat docs directory (no user.id subfolder)
+    os.makedirs(BASE_PATH, exist_ok=True)
 
-    if project_id:
-        if filename.endswith(".docx"):
-            base = filename[:-5]
-            filename = f"{base}_project_{project_id}.docx"
-        else:
-            filename = f"{filename}_project_{project_id}.docx"
+    # Normalize URS filename variant to the master template name
+    filename_upper = filename.upper()
+    if "URS" in filename_upper and ("USER REQ" in filename_upper or "USER REQUEST" in filename_upper):
+        filename = "URS - User Requirements Specification.docx"
     else:
         filename = filename if filename.endswith(".docx") else filename + ".docx"
 
-    full_path = os.path.join(user_dir, filename)
+    # Return the path directly in BASE_PATH (backend/docs/)
+    full_path = os.path.join(BASE_PATH, filename)
     print(f"[DEBUG] Document path: {full_path}")
     return full_path
 
 def get_or_create_document(db: Session, user: UserModel, filename: str, project_id: int) -> DocumentModel:
+    filename_upper = filename.upper()
+    if "URS" in filename_upper and ("USER REQ" in filename_upper or "USER REQUEST" in filename_upper):
+        filename = "URS - User Requirements Specification.docx"
+    else:
+        filename = filename if filename.endswith(".docx") else filename + ".docx"
+
     doc = db.query(DocumentModel).filter_by(
         user_id=user.id, filename=filename, project_id=project_id
     ).first()
@@ -575,6 +580,65 @@ def add_entry_db(db: Session, document_id: int, heading: str, content: str):
     db.commit()
     db.refresh(entry)
     return entry.id
+
+
+def initialize_document_metadata(file_path: str, details, user: UserModel):
+    import docx
+    from datetime import datetime
+    if not os.path.exists(file_path):
+        return
+
+    try:
+        doc = docx.Document(file_path)
+        system_name = details.system_application_name if (details and details.system_application_name) else "The System"
+        author_name = f"{user.first_name} {user.last_name} ({user.title or 'Validation Author'})"
+        current_date = datetime.now().strftime("%d-%b-%Y")
+
+        # Replace <<Software Name and version>> placeholder in all paragraphs
+        placeholder = "<<Software Name and version>>"
+        for p in doc.paragraphs:
+            if placeholder in p.text:
+                replaced = False
+                for run in p.runs:
+                    if placeholder in run.text:
+                        run.text = run.text.replace(placeholder, system_name)
+                        replaced = True
+                if not replaced:
+                    p.text = p.text.replace(placeholder, system_name)
+
+        # Replace in tables (excluding the Revision History table)
+        for t_idx, table in enumerate(doc.tables):
+            if t_idx == 3:
+                continue
+            for row in table.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        if placeholder in p.text:
+                            replaced = False
+                            for run in p.runs:
+                                if placeholder in run.text:
+                                    run.text = run.text.replace(placeholder, system_name)
+                                    replaced = True
+                            if not replaced:
+                                p.text = p.text.replace(placeholder, system_name)
+
+        # Update Revision History (Table 3)
+        if len(doc.tables) > 3:
+            table3 = doc.tables[3]
+            headers = [c.text.strip().lower() for c in table3.rows[0].cells] if len(table3.rows) > 0 else []
+            if any("version" in h or "revision" in h or "history" in h for h in headers):
+                if len(table3.rows) > 1:
+                    row = table3.rows[1]
+                    cells = row.cells
+                    cells[1].text = current_date
+                    cells[2].text = author_name
+                    if not cells[3].text.strip():
+                        cells[3].text = "Initial version"
+
+        doc.save(file_path)
+        print(f"[initialize_document_metadata] Successfully updated placeholders & revision history in {file_path}")
+    except Exception as e:
+        print(f"[initialize_document_metadata] Error updating metadata: {e}")
 
 
 # -------------------- TEMPLATE MANAGEMENT --------------------
@@ -655,6 +719,15 @@ def create_file(
             if os.path.exists(template_path):
                 shutil.copy(template_path, path)
                 debug_log += "Copied template locally!\n"
+                
+                # Dynamic placeholder replacement and metadata initialization
+                try:
+                    from models import ProjectDetailsModel
+                    proj_details = db.query(ProjectDetailsModel).filter_by(project_id=project_id).first()
+                    initialize_document_metadata(path, proj_details, current_user)
+                    debug_log += "Initialized template metadata successfully!\n"
+                except Exception as meta_err:
+                    debug_log += f"Metadata initialization failed: {meta_err}\n"
             else:
                 debug_log += "Local template not found.\n"
 
@@ -728,6 +801,15 @@ def add_under(
         if os.path.exists(template_path):
             shutil.copy(template_path, path)
             print(f"[add-under] Template re-copied from {template_path}")
+            
+            # Re-initialize placeholders and metadata
+            try:
+                from models import ProjectDetailsModel
+                proj_details = db.query(ProjectDetailsModel).filter_by(project_id=project_id).first()
+                initialize_document_metadata(path, proj_details, current_user)
+            except Exception as meta_err:
+                print(f"[add-under] Re-initialize metadata failed: {meta_err}")
+                
             ctrl = Controller(path)
         else:
             print(f"[add-under] WARNING: Template not found at {template_path}")
@@ -745,11 +827,7 @@ def add_under(
                 gxp_risk=req.gxp_risk or ""
             )
             if inserted:
-                print(f"[add-under] Inserted into table row for URS ID: {req.urs_id}")
-                # ALSO add bold title + description RIGHT under the heading (before the table)
-                title_text = req.urs_title or req.urs_id or ''
-                ctrl.addunder_heading_top(req.heading_text, title_text, req.new_text)
-                print(f"[add-under] Added bold title+desc under heading (before table)")
+                 print(f"[add-under] Inserted into table row for URS ID: {req.urs_id}")
 
         # Fallback: plain text insert only (no table fields provided)
         if not inserted:
@@ -1862,3 +1940,279 @@ def verify_audit_immutability(
     except Exception as e:
         print(f"Error verifying immutability: {str(e)}")
         raise HTTPException(500, f"Error: {str(e)}")
+
+
+@app.post("/db/ai/refine-requirement")
+def refine_requirement(
+    req: RefineRequirementRequest,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Refine a raw requirement description using a dynamically assembled AI prompt.
+    Reads project context (system name, methodology, regulations, GAMP category)
+    from the database to produce context-aware, regulation-aligned URS content.
+    """
+    import urllib.request
+    import json
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    # ── Step 1: Fetch project context from DB ───────────────────────────────
+    project = (
+        db.query(ProjectModel)
+        .options(joinedload(ProjectModel.details))
+        .filter_by(id=req.project_id)
+        .first()
+    ) if req.project_id else None
+
+    details = project.details if project else None
+    system_name = (
+        details.system_application_name
+        if (details and details.system_application_name)
+        else "The system"
+    )
+    methodology = (
+        "CSA"
+        if (details and details.methodologies and details.methodologies.get("csa"))
+        else "CSV"
+    )
+    gamp_cats = details.gamp_categories if (details and details.gamp_categories) else {}
+    reg_data = details.regulations if (details and details.regulations) else {}
+
+    # ── Step 2: Build the active regulations list ───────────────────────────
+    active_regs = []
+    if reg_data.get("cfr211"):     active_regs.append("US FDA 21 CFR Part 11 (Electronic Records; Electronic Signatures)")
+    if reg_data.get("cfr820"):     active_regs.append("US FDA 21 CFR Part 820 (Quality System Regulation)")
+    if reg_data.get("annexure11"): active_regs.append("EU GMP Annex 11 (Computerised Systems)")
+    if reg_data.get("iso13485"):   active_regs.append("ISO 13485 (Medical Devices QMS)")
+    if reg_data.get("crf210"):     active_regs.append("US FDA 21 CFR Part 210 (cGMP in Manufacturing)")
+    if reg_data.get("crf211_2"):   active_regs.append("US FDA 21 CFR Part 211 (cGMP for Finished Pharmaceuticals)")
+    if not active_regs:
+        active_regs = ["US FDA 21 CFR Part 11 (Electronic Records; Electronic Signatures)"]
+    regs_list = ", ".join(active_regs)
+
+    # ── Step 3: Build regulation clause cheat sheets ────────────────────────
+    cheat_sheet_parts = []
+
+    if reg_data.get("cfr211") or not reg_data:
+        cheat_sheet_parts.append(
+            "21 CFR Part 11 Clause Reference:\n"
+            "  11.10(a)  → System validation and intended performance\n"
+            "  11.10(b)  → Accurate and complete copies of records\n"
+            "  11.10(c)  → Protection and retention of records\n"
+            "  11.10(d)  → Limit system access to authorized individuals\n"
+            "  11.10(e)  → Audit trails — time-stamped, computer-generated\n"
+            "  11.10(f)  → Operational and sequencing system checks\n"
+            "  11.10(g)  → Authority and privilege checks (role-based access)\n"
+            "  11.10(h)  → Device checks to validate input source\n"
+            "  11.50     → Electronic signature manifestations (name, date, meaning)\n"
+            "  11.70     → Signature and record linking\n"
+            "  11.100    → Electronic signature general requirements\n"
+            "  11.200    → Signature components and controls\n"
+            "  11.300    → Identification codes and password controls"
+        )
+
+    if reg_data.get("cfr820"):
+        cheat_sheet_parts.append(
+            "21 CFR Part 820 Clause Reference:\n"
+            "  §820.30   → Design controls\n"
+            "  §820.40   → Document controls\n"
+            "  §820.50   → Purchasing and supplier controls\n"
+            "  §820.70   → Production and process controls\n"
+            "  §820.100  → Corrective and Preventive Action (CAPA)\n"
+            "  §820.180  → Records — general requirements\n"
+            "  §820.184  → Device history records"
+        )
+
+    if reg_data.get("annexure11"):
+        cheat_sheet_parts.append(
+            "EU GMP Annex 11 Clause Reference:\n"
+            "  Clause 1  → Risk management\n"
+            "  Clause 2  → Personnel and training\n"
+            "  Clause 3-4 → Suppliers and service providers / validation\n"
+            "  Clause 7  → Data storage, backup, and recovery\n"
+            "  Clause 8  → Printouts and human-readable records\n"
+            "  Clause 9  → Audit trails\n"
+            "  Clause 10 → Change and configuration management\n"
+            "  Clause 11 → Periodic evaluation\n"
+            "  Clause 12.1-12.2 → Electronic signatures\n"
+            "  Clause 13 → Incident management\n"
+            "  Clause 16 → Business continuity and disaster recovery"
+        )
+
+    if reg_data.get("iso13485"):
+        cheat_sheet_parts.append(
+            "ISO 13485 Clause Reference:\n"
+            "  §4.2.3    → Control of documents\n"
+            "  §4.2.4    → Control of records\n"
+            "  §6.4      → Work environment and contamination control\n"
+            "  §7.1      → Product realization planning\n"
+            "  §7.3      → Design and development controls\n"
+            "  §8.2      → Monitoring and measurement\n"
+            "  §8.3      → Control of nonconforming product\n"
+            "  §8.5.2    → Corrective action\n"
+            "  §8.5.3    → Preventive action"
+        )
+
+    if reg_data.get("crf210"):
+        cheat_sheet_parts.append(
+            "21 CFR Part 210 Clause Reference:\n"
+            "  §210.1    → Scope — minimum current GMP in manufacturing\n"
+            "  §210.3    → Definitions — batch, lot, component, drug product"
+        )
+
+    if reg_data.get("crf211_2"):
+        cheat_sheet_parts.append(
+            "21 CFR Part 211 Clause Reference:\n"
+            "  §211.68   → Automated, mechanical, and electronic equipment\n"
+            "  §211.100  → Written procedures — deviations\n"
+            "  §211.160  → General requirements — laboratory controls\n"
+            "  §211.180  → General requirements — records and reports\n"
+            "  §211.194  → Laboratory records\n"
+            "  §211.196  → Distribution records"
+        )
+
+    cheat_sheet = "\n\n".join(cheat_sheet_parts)
+
+    # ── Step 4: GAMP category context ───────────────────────────────────────
+    gamp_context = ""
+    active_cats = [k.replace("category", "Category ") for k, v in gamp_cats.items() if v]
+    if active_cats:
+        gamp_context = (
+            f"GAMP 5 Context (project uses: {', '.join(active_cats)}):\n"
+            "  Category 1 → Infrastructure software (OS, DBs) — Lowest risk\n"
+            "  Category 3 → Non-configured software (standard packages) — Low/Medium risk\n"
+            "  Category 4 → Configured software (LIMS, ERP, DMS) — Medium/High risk\n"
+            "  Category 5 → Custom/bespoke software — Highest risk\n"
+            "Use the active GAMP category to calibrate the overall risk level."
+        )
+
+    # ── Step 5: Risk terminology based on methodology ────────────────────────
+    if methodology == "CSA":
+        risk_output_instruction = (
+            "- gxp_risk_level: \"Critical\" (if High risk) or \"Non-Critical\" (if Medium or Low risk)\n"
+            "- testing_approach: \"Scripted\" (if Critical) or \"Exploratory/Unscripted\" (if Non-Critical)"
+        )
+    else:  # CSV
+        risk_output_instruction = (
+            "- gxp_risk_level: \"Risk - 3\" (if High), \"Risk - 2\" (if Medium), \"Risk - 1\" (if Low)\n"
+            "- testing_approach: \"Scripted\" (if High), \"Unscripted\" (if Medium), \"Ad-hoc\" (if Low)"
+        )
+
+    # ── Step 6: Assemble dynamic system prompt ───────────────────────────────
+    dynamic_system_prompt = f"""You are a validation engineering expert specializing in Life Sciences computer system validation.
+Your task is to refine a raw user requirement for the application named "{system_name}" into a formal, clear, and highly humanized User Requirement Specification (URS) paragraph, and perform a compliance/GxP assessment.
+
+Active Regulations for this project: {regs_list}
+
+{cheat_sheet}
+
+{gamp_context}
+
+Rules for refined_content:
+1. Write as a cohesive, professional paragraph of 2-3 sentences. Never write a single short sentence.
+2. Refer to the application specifically as "{system_name}" (e.g. "{system_name} shall restrict..." not "The system shall...").
+3. Align to the active regulations listed above. Use the clause reference maps to pick the most accurate section(s).
+4. When multiple regulations are active and both apply, combine the references (e.g. "21 CFR 11.10(e) / EU Annex 11 Clause 9").
+5. Mention the specific technical mechanism required (audit trail, privilege check, signature linking, encryption, timestamping, reason for change, etc.).
+6. If the requirement does NOT relate to electronic records, data integrity, access control, audit trails, signatures, or GxP processes, set gxp_yes_no to "No" and gxp_reference to "N/A".
+
+Output ONLY a valid JSON object with exactly these keys:
+- refined_content   : The refined professional URS text (2-3 sentences).
+- gxp_yes_no        : "Yes" or "No"
+- gxp_reference     : Specific clause(s) from the active regulations (e.g. "21 CFR 11.10(g)" or "21 CFR 11.10(e) / Annex 11 Clause 9") or "N/A"
+- gxp_risk          : "High", "Medium", or "Low"
+{risk_output_instruction}
+
+Do not include markdown formatting, code blocks, or any text outside the JSON object.
+"""
+
+    # ── Step 7: Local rule-based fallback ───────────────────────────────────
+    def run_local_rule_fallback(description: str) -> dict:
+        clean = description.strip()
+        cap = (clean[0].upper() + clean[1:]) if clean else "the system feature"
+        if cap.endswith("."): cap = cap[:-1]
+        d = description.lower()
+
+
+        is_csa = (methodology == "CSA")
+        high_risk_level  = "Critical"   if is_csa else "Risk - 3"
+        med_risk_level   = "Non-Critical" if is_csa else "Risk - 2"
+        low_risk_level   = "Non-Critical" if is_csa else "Risk - 1"
+        high_testing     = "Scripted"
+        med_testing      = "Exploratory/Unscripted" if is_csa else "Unscripted"
+        low_testing      = "Exploratory/Unscripted" if is_csa else "Ad-hoc"
+
+        name = system_name
+
+        if any(k in d for k in ["sign", "approve", "signature"]):
+            return {"refined_content": f"{name} shall enforce secure electronic signature controls requiring that all approval actions be authenticated with the user's unique credentials and linked to the corresponding record. Per 21 CFR 11.50, signature manifestations shall be permanently embedded into the electronic record at the point of signing.", "gxp_yes_no": "Yes", "gxp_reference": "21 CFR 11.50", "gxp_risk": "High", "gxp_risk_level": high_risk_level, "testing_approach": high_testing}
+        elif any(k in d for k in ["audit", "track", "history", "log"]):
+            return {"refined_content": f"{name} shall maintain a secure, computer-generated, time-stamped audit trail that automatically records the date, time, and identity of the operator for every action that creates, modifies, or deletes an electronic record. In accordance with 21 CFR 11.10(e), these entries shall be protected from modification and available for review by authorized personnel.", "gxp_yes_no": "Yes", "gxp_reference": "21 CFR 11.10(e)", "gxp_risk": "High", "gxp_risk_level": high_risk_level, "testing_approach": high_testing}
+        elif any(k in d for k in ["password", "login", "credential", "access"]):
+            return {"refined_content": f"{name} shall enforce strict identification and access controls ensuring that each user is assigned a unique identification code and password that cannot be shared or reused across accounts. Per 21 CFR 11.300, the system shall detect and limit invalid or unauthorized log-on attempts and require periodic password updates.", "gxp_yes_no": "Yes", "gxp_reference": "21 CFR 11.300", "gxp_risk": "High", "gxp_risk_level": high_risk_level, "testing_approach": high_testing}
+        elif any(k in d for k in ["delete", "remove", "purge", "role", "authoriz", "permission", "privilege"]):
+            return {"refined_content": f"{name} shall restrict the ability to {cap.lower()} exclusively to personnel with the appropriate role-based privileges. In alignment with 21 CFR 11.10(g), authority checks shall be performed at the system level before executing any such action, and all events shall be captured in the immutable audit trail with a timestamp and a mandatory reason for change.", "gxp_yes_no": "Yes", "gxp_reference": "21 CFR 11.10(g)", "gxp_risk": "High", "gxp_risk_level": high_risk_level, "testing_approach": high_testing}
+        elif any(k in d for k in ["validat", "test", "verif"]):
+            return {"refined_content": f"{name} shall be validated to confirm that all features perform their intended functions accurately, reliably, and consistently under normal operating conditions. In accordance with 21 CFR 11.10(a), validation documentation including test protocols, execution records, and deviation reports shall be maintained as part of the system validation life cycle.", "gxp_yes_no": "Yes", "gxp_reference": "21 CFR 11.10(a)", "gxp_risk": "High", "gxp_risk_level": high_risk_level, "testing_approach": high_testing}
+        elif any(k in d for k in ["copy", "export", "print", "report"]):
+            return {"refined_content": f"{name} shall provide the capability to generate accurate, complete, and human-readable copies of electronic records on demand. Per 21 CFR 11.10(b), these copies shall faithfully represent the original record and be available in both electronic and paper form throughout the required retention period.", "gxp_yes_no": "Yes", "gxp_reference": "21 CFR 11.10(b)", "gxp_risk": "Medium", "gxp_risk_level": med_risk_level, "testing_approach": med_testing}
+        elif any(k in d for k in ["encrypt", "security", "transmission", "open system"]):
+            return {"refined_content": f"{name} shall apply encryption and additional procedural controls to protect electronic records transmitted over open networks from unauthorized access, interception, or alteration. In accordance with 21 CFR 11.30, the system shall use digital signature standards or equivalent technologies to ensure authenticity, integrity, and confidentiality during transmission.", "gxp_yes_no": "Yes", "gxp_reference": "21 CFR 11.30", "gxp_risk": "High", "gxp_risk_level": high_risk_level, "testing_approach": high_testing}
+        else:
+            return {"refined_content": f"{name} shall ensure that {cap.lower()} is implemented with full technical controls, data protection measures, and documented validation evidence in compliance with applicable GxP regulations.", "gxp_yes_no": "Yes", "gxp_reference": "21 CFR 11.10 (Controls for closed systems)", "gxp_risk": "Medium", "gxp_risk_level": med_risk_level, "testing_approach": med_testing}
+
+    # ── Step 8: Build user prompt and load API keys ───────────────────────────
+    user_prompt = (
+        f"Requirement ID: {req.urs_id}\n"
+        f"Requirement Title: {req.title}\n"
+        f"User Description: {req.description}"
+    )
+
+    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+    groq_key   = os.getenv("GROQ_API_KEY")
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    openai_key = os.getenv("OPENAI_API_KEY")
+
+    # ── Step 9: Try Groq → Gemini → OpenAI → Fallback ───────────────────────
+    if groq_key:
+        try:
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json", "User-Agent": user_agent}
+            payload = {"model": "llama-3.3-70b-versatile", "messages": [{"role": "system", "content": dynamic_system_prompt}, {"role": "user", "content": user_prompt}], "response_format": {"type": "json_object"}, "temperature": 0.4}
+            req_obj = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+            with urllib.request.urlopen(req_obj, timeout=15) as response:
+                res_data = json.loads(response.read().decode("utf-8"))
+                return json.loads(res_data["choices"][0]["message"]["content"])
+        except Exception as e:
+            print(f"Groq API call failed: {str(e)}. Trying next.")
+
+    if gemini_key:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+            headers = {"Content-Type": "application/json", "User-Agent": user_agent}
+            payload = {"contents": [{"parts": [{"text": f"{dynamic_system_prompt}\n\nUser Input:\n{user_prompt}"}]}], "generationConfig": {"responseMimeType": "application/json", "temperature": 0.4}}
+            req_obj = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+            with urllib.request.urlopen(req_obj, timeout=15) as response:
+                res_data = json.loads(response.read().decode("utf-8"))
+                return json.loads(res_data["candidates"][0]["content"]["parts"][0]["text"])
+        except Exception as e:
+            print(f"Gemini API call failed: {str(e)}. Trying next.")
+
+    if openai_key:
+        try:
+            url = "https://api.openai.com/v1/chat/completions"
+            headers = {"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json", "User-Agent": user_agent}
+            payload = {"model": "gpt-4o-mini", "messages": [{"role": "system", "content": dynamic_system_prompt}, {"role": "user", "content": user_prompt}], "response_format": {"type": "json_object"}, "temperature": 0.4}
+            req_obj = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+            with urllib.request.urlopen(req_obj, timeout=15) as response:
+                res_data = json.loads(response.read().decode("utf-8"))
+                return json.loads(res_data["choices"][0]["message"]["content"])
+        except Exception as e:
+            print(f"OpenAI API call failed: {str(e)}.")
+
+    return run_local_rule_fallback(req.description)
+

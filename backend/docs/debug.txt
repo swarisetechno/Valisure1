@@ -1,0 +1,33 @@
+Creating: SRS – System Risk Assessment
+Path: D:\Ganesh\Bombe\Learnings\Valisure_1\backend\docs\6\SRS – System Risk Assessment_project_4.docx
+Is New: True
+Template Path: D:\Ganesh\Bombe\Learnings\Valisure_1\backend\templates\SRS – System Risk Assessment.docx
+Template Exists: False
+Local template not found.
+Drive: no drive_folder_id for this project — skipped.
+
+Creating: URS - User Requirements Specification
+Path: D:\Ganesh\Bombe\Learnings\Valisure_1\backend\docs\6\URS - User Requirements Specification_project_4.docx
+Is New: True
+Mapped to URS template: URS - User Requirements Specification.docx
+Template Path: D:\Ganesh\Bombe\Learnings\Valisure_1\backend\templates\URS - User Requirements Specification.docx
+Template Exists: True
+Copied template locally!
+Drive: no drive_folder_id for this project — skipped.
+
+Creating: GxP Assessment
+Path: D:\Ganesh\Bombe\Learnings\Valisure_1\backend\docs\6\GxP Assessment_project_4.docx
+Is New: True
+Template Path: D:\Ganesh\Bombe\Learnings\Valisure_1\backend\templates\GxP Assessment.docx
+Template Exists: False
+Local template not found.
+Drive: no drive_folder_id for this project — skipped.
+
+Creating: CFR Part 11 (ERES) Assessment
+Path: D:\Ganesh\Bombe\Learnings\Valisure_1\backend\docs\6\CFR Part 11 (ERES) Assessment_project_4.docx
+Is New: True
+Template Path: D:\Ganesh\Bombe\Learnings\Valisure_1\backend\templates\CFR Part 11 (ERES) Assessment.docx
+Template Exists: False
+Local template not found.
+Drive: no drive_folder_id for this project — skipped.
+

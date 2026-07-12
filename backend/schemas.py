@@ -174,3 +174,20 @@ class RoleResponse(BaseModel):
     created_at: Optional[datetime] = None
     class Config:
         orm_mode = True
+
+
+# -------------------- AI REFINE SCHEMAS --------------------
+class RefineRequirementRequest(BaseModel):
+    urs_id: str
+    title: str
+    description: str
+    project_id: Optional[int] = None  # project context for dynamic prompt building
+
+class RefineRequirementResponse(BaseModel):
+    refined_content: str
+    gxp_yes_no: str
+    gxp_reference: str
+    gxp_risk: str
+    gxp_risk_level: str
+    testing_approach: str
+

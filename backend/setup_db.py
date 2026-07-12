@@ -41,8 +41,14 @@ def run_setup():
         # Alter project_details table columns
         conn.execute(text("ALTER TABLE project_details ADD COLUMN IF NOT EXISTS drive_folder_id VARCHAR(255)"))
         
+        # Alter documents table columns
+        conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE"))
+        conn.execute(text("ALTER TABLE documents DROP CONSTRAINT IF EXISTS uq_project_filename"))
+        conn.execute(text("ALTER TABLE documents ADD CONSTRAINT uq_project_filename UNIQUE (project_id, filename)"))
+
         # Alter document_entries table columns
         conn.execute(text("ALTER TABLE document_entries ADD COLUMN IF NOT EXISTS req_id INTEGER"))
+        conn.execute(text("ALTER TABLE document_entries ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'draft'"))
         
         # Backfill req_id for document_entries
         conn.execute(text("""
