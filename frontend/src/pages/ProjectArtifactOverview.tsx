@@ -156,7 +156,7 @@ export default function ProjectArtifactOverview() {
     }
   }, [showCommonReqsModal]);
 
-  const handleAddCommonReqsToProject = () => {
+  const handleAddCommonReqsToProject = async () => {
     if (selectedCommonReqIds.length === 0) {
       alert('Please select at least one requirement to add.');
       return;
@@ -164,7 +164,7 @@ export default function ProjectArtifactOverview() {
 
     const pid = selectedProject?.id || incomingProjectData?.id || 'PROJ001';
     const key = `requirementsData_${pid}`;
-    let existing = [];
+    let existing: any[] = [];
     try {
       existing = JSON.parse(localStorage.getItem(key) || '[]');
     } catch {
@@ -172,10 +172,15 @@ export default function ProjectArtifactOverview() {
     }
 
     const toAdd = commonReqs.filter(cr => selectedCommonReqIds.includes(cr.id));
-    
-    const newRequirements = toAdd.map((cr, index) => {
-      const counter = existing.length + index + 1;
-      const ursId = `URS_${String(counter).padStart(3, '0')}`;
+
+    // Build new requirement objects with sequential IDs starting after the current max
+    const currentMax = existing.reduce((max: number, r: any) => {
+      const m = r.id?.match(/URS_(\d+)/);
+      return m ? Math.max(max, parseInt(m[1], 10)) : max;
+    }, 0);
+
+    const newRequirements: any[] = toAdd.map((cr, index) => {
+      const ursId = `URS_${String(currentMax + index + 1).padStart(3, '0')}`;
       return {
         id: ursId,
         title: cr.title,
@@ -186,20 +191,63 @@ export default function ProjectArtifactOverview() {
         risk: cr.risk || 'Medium',
         riskLevel: cr.riskLevel || 'Risk - 2',
         testing: cr.testing || 'Unscripted',
-        status: 'Draft',
+        status: 'Draft',          // will be updated to 'Submitted' if doc write succeeds
         versions: [],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        dbEntryId: undefined as number | undefined,
       };
     });
 
-    const updated = [...existing, ...newRequirements];
-    localStorage.setItem(key, JSON.stringify(updated));
-    setRequirementsData(updated);
+    // Save to localStorage immediately so user sees requirements right away
+    const merged = [...existing, ...newRequirements];
+    localStorage.setItem(key, JSON.stringify(merged));
+    setRequirementsData(merged);
+
+    // Write each requirement to the Word document
+    const numericPid = typeof pid === 'number' ? pid : parseInt(String(pid), 10);
+    if (!isNaN(numericPid)) {
+      for (let i = 0; i < newRequirements.length; i++) {
+        const req = newRequirements[i];
+        try {
+          const result = await documentApi.addUnder(
+            "URS - User Requirements Specification",
+            "8.0 USER REQUIREMENTS",
+            req.ursEnhanced || req.description,
+            numericPid,
+            {
+              urs_id: req.id,
+              urs_title: req.title,
+              gxp: req.gxp,
+              gxp_reference: req.gxpReference,
+              gxp_risk: req.risk,
+            }
+          );
+          if (result?.entry_id) {
+            newRequirements[i].dbEntryId = result.entry_id;
+            newRequirements[i].status = 'Submitted';
+          }
+        } catch (e: any) {
+          const errMsg: string = e?.message || '';
+          if (errMsg.includes('FILE_LOCKED') || e?.status === 423) {
+            console.warn(`[addCommonReqs] Word doc locked — ${req.id} saved as Draft`);
+          } else {
+            console.warn(`[addCommonReqs] Could not write ${req.id} to doc:`, e);
+          }
+        }
+      }
+
+      // Re-save with updated dbEntryIds and statuses
+      const finalMerged = [...existing, ...newRequirements];
+      localStorage.setItem(key, JSON.stringify(finalMerged));
+      setRequirementsData(finalMerged);
+    }
+
     setShowCommonReqsModal(false);
     setSelectedCommonReqIds([]);
     alert(`Successfully added ${newRequirements.length} requirement(s) to this project!`);
   };
+
 
   // Reload requirements whenever the active project changes
   useEffect(() => {
@@ -236,31 +284,55 @@ export default function ProjectArtifactOverview() {
   };
 
   const handleDeleteRequirement = async (reqId: string) => {
-    if (!confirm('Delete this requirement? This will also remove it from the document.')) return;
+    if (!confirm(
+      'Delete this requirement?\n\nThis will:\n• Remove it from the Word document\n• Renumber remaining requirements sequentially\n\nDo you want to continue?'
+    )) return;
+
     const pid = selectedProject?.id || incomingProjectData?.id || 'PROJ001';
+    const numericPid = typeof pid === 'number' ? pid : parseInt(String(pid), 10);
     const key = `requirementsData_${pid}`;
+
     try {
-      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      const existing: any[] = JSON.parse(localStorage.getItem(key) || '[]');
       const reqToDelete = existing.find((r: any) => r.id === reqId);
-      
-      // Delete from backend DB if we have an entry ID
-      if (reqToDelete?.dbEntryId) {
+
+      // 1. Delete from Word document AND renumber remaining rows there
+      if (!isNaN(numericPid)) {
         try {
-          await documentApi.deleteEntry(reqToDelete.dbEntryId);
-          console.log('[deleteEntry] Removed from DB, entry_id:', reqToDelete.dbEntryId);
-        } catch (e) {
-          console.warn('[deleteEntry] Could not remove from DB:', e);
+          await documentApi.deleteUrsRow(
+            numericPid,
+            reqId,
+            reqToDelete?.dbEntryId
+          );
+          console.log(`[deleteUrsRow] Removed '${reqId}' from Word doc and renumbered`);
+        } catch (e: any) {
+          const errMsg: string = e?.message || '';
+          if (errMsg.includes('FILE_LOCKED') || e?.status === 423) {
+            alert('⚠️ The Word document is currently open in Microsoft Word.\n\nThe requirement was removed from the list but could NOT be deleted from the document.\n\nPlease close Word and manually remove the row.');
+          } else {
+            console.warn('[deleteUrsRow] Could not remove from doc (non-fatal):', e);
+          }
         }
       }
 
-      const updated = existing.filter((r: any) => r.id !== reqId);
-      localStorage.setItem(key, JSON.stringify(updated));
-      setRequirementsData(updated);
+      // 2. Remove from localStorage
+      const remaining = existing.filter((r: any) => r.id !== reqId);
+
+      // 3. Renumber remaining requirements sequentially (URS_001, URS_002, ...)
+      //    so localStorage always matches the Word document order
+      const renumbered = remaining.map((r: any, i: number) => ({
+        ...r,
+        id: `URS_${String(i + 1).padStart(3, '0')}`,
+      }));
+
+      localStorage.setItem(key, JSON.stringify(renumbered));
+      setRequirementsData(renumbered);
       setOpenMenuId(null);
     } catch (error) {
       console.error('Error deleting requirement:', error);
     }
   };
+
 
   const handleLogout = () => {
     localStorage.removeItem("userRole");
@@ -532,18 +604,29 @@ export default function ProjectArtifactOverview() {
 
                 {/* Requirements Table */}
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full table-fixed">
+                    <colgroup>
+                      <col className="w-[110px]" />
+                      <col className="w-[140px]" />
+                      <col className="w-[280px]" />
+                      <col className="w-[90px]" />
+                      <col className="w-[90px]" />
+                      <col className="w-[100px]" />
+                      <col className="w-[130px]" />
+                      <col className="w-[120px]" />
+                      <col className="w-[80px]" />
+                    </colgroup>
                     <thead className="bg-white border-b border-gray-300">
                       <tr className="text-sm font-bold text-gray-900">
-                        <th className="px-6 py-4 text-left">URS ID</th>
-                        <th className="px-6 py-4 text-left">URS Title</th>
-                        <th className="px-6 py-4 text-left">URS Description</th>
-                        <th className="px-6 py-4 text-left">GxP (Y/N)</th>
-                        <th className="px-6 py-4 text-left">GxP Risk</th>
-                        <th className="px-6 py-4 text-left">Risk Level</th>
-                        <th className="px-6 py-4 text-left">Testing Approach</th>
-                        <th className="px-6 py-4 text-center">Status</th>
-                        <th className="px-6 py-4 text-center">Action</th>
+                        <th className="px-4 py-4 text-left">URS ID</th>
+                        <th className="px-4 py-4 text-left">URS Title</th>
+                        <th className="px-4 py-4 text-left">URS Description</th>
+                        <th className="px-4 py-4 text-left">GxP (Y/N)</th>
+                        <th className="px-4 py-4 text-left">GxP Risk</th>
+                        <th className="px-4 py-4 text-left">Risk Level</th>
+                        <th className="px-4 py-4 text-left">Testing Approach</th>
+                        <th className="px-4 py-4 text-center">Status</th>
+                        <th className="px-4 py-4 text-center">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -553,36 +636,42 @@ export default function ProjectArtifactOverview() {
                           className={`text-sm relative ${req.status === 'Draft' ? 'hover:bg-blue-50 transition' : 'hover:bg-gray-50 transition'}`}
                         >
                           <td
-                            className="px-6 py-4 text-gray-900 font-semibold cursor-pointer"
+                            className="px-4 py-3 text-gray-900 font-semibold cursor-pointer align-middle"
                             onClick={() => req.status === 'Draft' && navigate('/bulk-user-requirements', { state: { projectData: activeRaw, selectedArtifact, draftData: req } })}
                           >
-                            {req.id}
+                            <span className="text-xs font-bold text-[#1D2749]">{req.id}</span>
                           </td>
                           <td
-                            className="px-6 py-4 text-gray-900 font-semibold cursor-pointer"
+                            className="px-4 py-3 text-gray-900 font-semibold cursor-pointer align-middle"
                             onClick={() => req.status === 'Draft' && navigate('/bulk-user-requirements', { state: { projectData: activeRaw, selectedArtifact, draftData: req } })}
                           >
-                            {req.title}
+                            <div className="max-h-[60px] overflow-hidden text-xs font-semibold leading-snug" title={req.title}>
+                              {req.title}
+                            </div>
                           </td>
-                          <td className="px-6 py-4 text-gray-600">{req.ursEnhanced || req.description}</td>
-                          <td className="px-6 py-4 text-left">
-                            <span className={`px-4 py-2 rounded-full text-sm font-semibold border-2 ${req.gxp === 'Yes' ? 'border-blue-400 text-blue-700 bg-blue-50' : 'border-gray-400 text-gray-700 bg-gray-50'}`}>
+                          <td className="px-4 py-3 text-gray-600 align-middle">
+                            <div className="max-h-[60px] overflow-hidden text-xs leading-snug" title={req.ursEnhanced || req.description}>
+                              {req.ursEnhanced || req.description}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-left align-middle">
+                            <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold border ${req.gxp === 'Yes' ? 'border-blue-400 text-blue-700 bg-blue-50' : 'border-gray-400 text-gray-700 bg-gray-50'}`}>
                               {req.gxp}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-left">
-                            <span className={`px-4 py-2 rounded-lg text-sm font-semibold ${getRiskColor(req.risk)}`}>
+                          <td className="px-4 py-3 text-left align-middle">
+                            <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-semibold ${getRiskColor(req.risk)}`}>
                               {req.risk}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-left text-gray-900 font-semibold">{req.riskLevel}</td>
-                          <td className="px-6 py-4 text-left text-gray-900 font-semibold">{req.testing}</td>
-                          <td className="px-6 py-4 text-left">
-                            <span className={`w-full block text-center px-5 py-2 rounded-full text-sm font-semibold text-white ${['Submitted', 'Approved', 'Finalized'].includes(req.status) ? 'bg-green-600' : 'bg-amber-500'}`}>
+                          <td className="px-4 py-3 text-xs text-gray-800 font-semibold align-middle">{req.riskLevel}</td>
+                          <td className="px-4 py-3 text-xs text-gray-800 font-semibold align-middle">{req.testing}</td>
+                          <td className="px-4 py-3 text-center align-middle">
+                            <span className={`inline-block px-3 py-1.5 rounded-full text-xs font-semibold text-white ${['Submitted', 'Approved', 'Finalized'].includes(req.status) ? 'bg-green-600' : 'bg-amber-500'}`}>
                               {req.status === 'Draft' ? 'Draft' : req.status}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-center">
+                          <td className="px-4 py-3 text-center align-middle">
                             <div className="relative inline-block text-left">
                               <button
                                 onClick={(e) => {
@@ -779,13 +868,24 @@ export default function ProjectArtifactOverview() {
                       </div>
                     ) : (
                       <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                        <table className="w-full">
-                          <thead className="bg-white border-b border-gray-300">
-                            <tr className="text-sm font-bold text-gray-900">
-                              <th className="px-6 py-4 text-center w-12">
+                        <table className="w-full table-fixed">
+                          <colgroup>
+                            <col style={{ width: '44px' }} />
+                            <col style={{ width: '110px' }} />
+                            <col style={{ width: '140px' }} />
+                            <col style={{ width: '260px' }} />
+                            <col style={{ width: '80px' }} />
+                            <col style={{ width: '85px' }} />
+                            <col style={{ width: '90px' }} />
+                            <col style={{ width: '110px' }} />
+                            <col style={{ width: '105px' }} />
+                          </colgroup>
+                          <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                              <th className="px-3 py-3 text-center">
                                 <input
                                   type="checkbox"
-                                  checked={selectedCommonReqIds.length === commonReqs.length}
+                                  checked={selectedCommonReqIds.length === commonReqs.length && commonReqs.length > 0}
                                   onChange={(e) => {
                                     if (e.target.checked) {
                                       setSelectedCommonReqIds(commonReqs.map(r => r.id));
@@ -796,23 +896,25 @@ export default function ProjectArtifactOverview() {
                                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                 />
                               </th>
-                              <th className="px-6 py-4 text-left">URS ID</th>
-                              <th className="px-6 py-4 text-left">URS Title</th>
-                              <th className="px-6 py-4 text-left">URS Description</th>
-                              <th className="px-6 py-4 text-left">GxP (Y/N)</th>
-                              <th className="px-6 py-4 text-left">GxP Risk</th>
-                              <th className="px-6 py-4 text-left">Risk Level</th>
-                              <th className="px-6 py-4 text-left">Testing Approach</th>
-                              <th className="px-6 py-4 text-center">Status</th>
+                              <th className="px-3 py-3 text-left">URS ID</th>
+                              <th className="px-3 py-3 text-left">Title</th>
+                              <th className="px-3 py-3 text-left">Description</th>
+                              <th className="px-3 py-3 text-left">GxP</th>
+                              <th className="px-3 py-3 text-left">Risk</th>
+                              <th className="px-3 py-3 text-left">Risk Level</th>
+                              <th className="px-3 py-3 text-left">Testing</th>
+                              <th className="px-3 py-3 text-center">Status</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-gray-200">
+                          <tbody className="divide-y divide-gray-100">
                             {commonReqs.map((cr) => {
                               const isChecked = selectedCommonReqIds.includes(cr.id);
                               return (
-                                <tr 
-                                  key={cr.id} 
-                                  className={`text-sm relative transition hover:bg-gray-50 cursor-pointer ${isChecked ? 'bg-blue-50/30 hover:bg-blue-50/50' : ''}`}
+                                <tr
+                                  key={cr.id}
+                                  className={`text-sm transition cursor-pointer ${
+                                    isChecked ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-50'
+                                  }`}
                                   onClick={() => {
                                     if (isChecked) {
                                       setSelectedCommonReqIds(prev => prev.filter(id => id !== cr.id));
@@ -821,7 +923,7 @@ export default function ProjectArtifactOverview() {
                                     }
                                   }}
                                 >
-                                  <td className="px-6 py-4 text-center" onClick={e => e.stopPropagation()}>
+                                  <td className="px-3 py-3 text-center align-middle" onClick={e => e.stopPropagation()}>
                                     <input
                                       type="checkbox"
                                       checked={isChecked}
@@ -835,23 +937,37 @@ export default function ProjectArtifactOverview() {
                                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                     />
                                   </td>
-                                  <td className="px-6 py-4 text-gray-900 font-semibold">{cr.id}</td>
-                                  <td className="px-6 py-4 text-gray-900 font-semibold">{cr.title}</td>
-                                  <td className="px-6 py-4 text-gray-600">{cr.ursEnhanced || cr.description}</td>
-                                  <td className="px-6 py-4 text-left">
-                                    <span className={`px-4 py-2 rounded-full text-sm font-semibold border-2 ${cr.gxp === 'Yes' ? 'border-blue-400 text-blue-700 bg-blue-50' : 'border-gray-400 text-gray-700 bg-gray-50'}`}>
+                                  <td className="px-3 py-3 align-middle">
+                                    <span className="text-xs font-bold text-[#1D2749]">{cr.id}</span>
+                                  </td>
+                                  <td className="px-3 py-3 align-middle">
+                                    <div className="max-h-[52px] overflow-hidden text-xs font-semibold text-gray-900 leading-snug" title={cr.title}>
+                                      {cr.title}
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-3 align-middle">
+                                    <div className="max-h-[60px] overflow-hidden text-xs text-gray-600 leading-snug" title={cr.ursEnhanced || cr.description}>
+                                      {cr.ursEnhanced || cr.description}
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-3 align-middle">
+                                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold border ${
+                                      cr.gxp === 'Yes' ? 'border-blue-400 text-blue-700 bg-blue-50' : 'border-gray-300 text-gray-600 bg-gray-50'
+                                    }`}>
                                       {cr.gxp || '—'}
                                     </span>
                                   </td>
-                                  <td className="px-6 py-4 text-left">
-                                    <span className={`px-4 py-2 rounded-lg text-sm font-semibold ${getRiskColor(cr.risk)}`}>
+                                  <td className="px-3 py-3 align-middle">
+                                    <span className={`inline-block px-2 py-1 rounded-md text-xs font-semibold ${getRiskColor(cr.risk)}`}>
                                       {cr.risk || '—'}
                                     </span>
                                   </td>
-                                  <td className="px-6 py-4 text-left text-gray-900 font-semibold">{cr.riskLevel || '—'}</td>
-                                  <td className="px-6 py-4 text-left text-gray-900 font-semibold">{cr.testing || '—'}</td>
-                                  <td className="px-6 py-4 text-left">
-                                    <span className={`w-full block text-center px-5 py-2 rounded-full text-sm font-semibold text-white ${['Submitted', 'Approved', 'Finalized'].includes(cr.status) ? 'bg-green-600' : 'bg-amber-500'}`}>
+                                  <td className="px-3 py-3 text-xs text-gray-800 font-semibold align-middle">{cr.riskLevel || '—'}</td>
+                                  <td className="px-3 py-3 text-xs text-gray-800 font-semibold align-middle">{cr.testing || '—'}</td>
+                                  <td className="px-3 py-3 text-center align-middle">
+                                    <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold text-white ${
+                                      ['Submitted', 'Approved', 'Finalized'].includes(cr.status) ? 'bg-green-600' : 'bg-amber-500'
+                                    }`}>
                                       {cr.status || 'Draft'}
                                     </span>
                                   </td>

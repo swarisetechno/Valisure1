@@ -1659,17 +1659,7 @@ const CreateProject = () => {
 
                       // Collect all docs to create (avoid duplicates)
                       const docsToCreate = new Set<string>();
-
-                      if (formData.selectedMethodologies.csv) {
-                        Object.entries(formData.csvDeliverables).forEach(([key, checked]) => {
-                          if (checked && csvDocMap[key]) docsToCreate.add(csvDocMap[key]);
-                        });
-                      }
-                      if (formData.selectedMethodologies.csa) {
-                        Object.entries(formData.csaDeliverables).forEach(([key, checked]) => {
-                          if (checked && csaDocMap[key]) docsToCreate.add(csaDocMap[key]);
-                        });
-                      }
+                      docsToCreate.add("URS - User Requirements Specification");
 
                       // Create each document (fire & collect, don't block on failure)
                       await Promise.allSettled(
@@ -1679,7 +1669,7 @@ const CreateProject = () => {
                           )
                         )
                       );
-                      console.log(`Auto-created ${docsToCreate.size} document(s) for project ${projectId}`);
+                      console.log(`Auto-created URS document for project ${projectId}`);
                     }
                     // ────────────────────────────────────────────────────────────
 

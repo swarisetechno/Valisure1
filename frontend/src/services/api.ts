@@ -287,6 +287,25 @@ export const documentApi = {
     });
     return handleResponse(response);
   },
+
+  deleteUrsRow: async (projectId: number, ursId: string, entryId?: number) => {
+    const headers: Record<string, string> = {
+      ...getAuthHeaders(),
+      "X-Project-Id": String(projectId),
+    };
+    const params = new URLSearchParams({
+      filename: "URS - User Requirements Specification",
+      urs_id: ursId,
+    });
+    if (entryId !== undefined && entryId !== null) {
+      params.set("entry_id", String(entryId));
+    }
+    const response = await fetch(
+      `${API_BASE_URL}/delete-urs-row?${params.toString()}`,
+      { method: "DELETE", headers }
+    );
+    return handleResponse(response);
+  },
 };
 
 // ─── Audit Trail API ─────────────────────────────────────────

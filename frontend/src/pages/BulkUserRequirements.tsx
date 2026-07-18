@@ -49,15 +49,21 @@ export default function BulkUserRequirements() {
     if (isCommon) {
       try {
         const existing = JSON.parse(localStorage.getItem('commonRequirementsData') || '[]');
-        const counter = existing.length + 1;
-        return `URS_CR_${String(counter).padStart(3, '0')}`;
+        const maxNum = existing.reduce((max: number, r: any) => {
+          const m = r.id?.match(/URS_CR_(\d+)/);
+          return m ? Math.max(max, parseInt(m[1], 10)) : max;
+        }, 0);
+        return `URS_CR_${String(maxNum + 1).padStart(3, '0')}`;
       } catch { return 'URS_CR_001'; }
     }
     const pid = selectedProject?.id || incomingProject?.id || 'PROJ001';
     try {
       const existing = JSON.parse(localStorage.getItem(`requirementsData_${pid}`) || '[]');
-      const counter = existing.length + 1;
-      return `URS_${String(counter).padStart(3, '0')}`;
+      const maxNum = existing.reduce((max: number, r: any) => {
+        const m = r.id?.match(/URS_(\d+)/);
+        return m ? Math.max(max, parseInt(m[1], 10)) : max;
+      }, 0);
+      return `URS_${String(maxNum + 1).padStart(3, '0')}`;
     } catch { return 'URS_001'; }
   };
 

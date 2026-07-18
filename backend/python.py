@@ -523,9 +523,27 @@ class Controller:
             write_row(new_ucells)
             print(f"[addunder_table] Added new row → URS ID: {urs_id}")
 
-
+        self._format_table(target_table)
         self.save()
         return True
+
+    def _format_table(self, table):
+        """Set explicit column widths for URS tables to keep them neat, clean, and aligned."""
+        from docx.shared import Inches
+        # Expected column widths (in inches): ID=1.0, Desc=3.4, GxP=0.8, Ref=1.3, Risk=1.0
+        widths = [Inches(1.0), Inches(3.4), Inches(0.8), Inches(1.3), Inches(1.0)]
+        for row in table.rows:
+            # unique_cells gets the correct cells to avoid breaking merged structures
+            ucells = []
+            seen = set()
+            for cell in row.cells:
+                elem_id = id(cell._element)
+                if elem_id not in seen:
+                    seen.add(elem_id)
+                    ucells.append(cell)
+            for idx, cell in enumerate(ucells):
+                if idx < len(widths):
+                    cell.width = widths[idx]
 
     def adding(self, text):
         self.doc.add_paragraph(text)
@@ -534,20 +552,197 @@ class Controller:
     def save(self):
         self.doc.save(self.file_path)
 
-# -------------------- HELPERS --------------------
-def get_user_file_path(user: UserModel, filename: str, project_id: int = None):
-    # Create the flat docs directory (no user.id subfolder)
-    os.makedirs(BASE_PATH, exist_ok=True)
+    # ── Sequential renumbering helper ─────────────────────────────────────────
+    def _renumber_urs_rows(self, table):
+        """
+        Walk all data rows (skip header row 0) and renumber any cell whose
+        text matches URS_\\d+ sequentially: URS_001, URS_002, ...
+        Ensures no gaps remain after a deletion.
+        """
+        import re
 
-    # Normalize URS filename variant to the master template name
+        def unique_cells(row):
+            seen = set()
+            result = []
+            for cell in row.cells:
+                elem_id = id(cell._element)
+                if elem_id not in seen:
+                    seen.add(elem_id)
+                    result.append(cell)
+            return result
+
+        def set_cell_text(cell, text):
+            for para in cell.paragraphs:
+                for run in para.runs:
+                    run.text = ''
+            if cell.paragraphs:
+                p = cell.paragraphs[0]
+                if p.runs:
+                    p.runs[0].text = text or ''
+                else:
+                    p.add_run(text or '')
+            else:
+                cell.add_paragraph(text or '')
+
+        counter = 1
+        for row in table.rows[1:]:          # skip header row
+            ucells = unique_cells(row)
+            if not ucells:
+                continue
+            cell_text = ucells[0].text.strip()
+            if re.match(r'URS_\d+', cell_text):
+                new_id = f"URS_{str(counter).zfill(3)}"
+                set_cell_text(ucells[0], new_id)
+                counter += 1
+
+    # ── Delete a URS row by ID and renumber remaining rows ────────────────────
+    def delete_urs_row_from_table(self, heading_text, urs_id):
+        """
+        Locate the URS requirements table under *heading_text*, remove the row
+        whose first unique cell matches *urs_id* exactly, then renumber all
+        remaining URS rows sequentially (URS_001, URS_002, ...).
+        Returns True if the row was found and deleted, False otherwise.
+        """
+        import re
+        from docx.oxml.ns import qn
+
+        def normalize(s):
+            return re.sub(r'\s+', ' ', (s or '').strip().lower())
+
+        def unique_cells(row):
+            seen = set()
+            result = []
+            for cell in row.cells:
+                elem_id = id(cell._element)
+                if elem_id not in seen:
+                    seen.add(elem_id)
+                    result.append(cell)
+            return result
+
+        target = normalize(heading_text)
+        stripped_target = re.sub(r'^\d+(\.\d+)*\s+', '', target).strip()
+
+        # ── Step 1: find heading paragraph index ──────────────────────────────
+        heading_index = None
+        for i, para in enumerate(self.doc.paragraphs):
+            txt = normalize(para.text)
+            is_heading = para.style.name.startswith('Heading')
+            if txt == target or (stripped_target and txt == stripped_target and is_heading):
+                heading_index = i
+                break
+            if stripped_target and stripped_target in txt and is_heading:
+                heading_index = i
+                break
+
+        if heading_index is None:
+            print(f"[delete_urs_row] Heading '{heading_text}' not found")
+            return False
+
+        # ── Step 2: find the first table after that heading in body XML ───────
+        heading_elem = self.doc.paragraphs[heading_index]._element
+        body = self.doc.element.body
+        found_heading = False
+        target_table = None
+        for child in body:
+            if child == heading_elem:
+                found_heading = True
+                continue
+            if found_heading:
+                tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                if tag == 'tbl':
+                    for tbl in self.doc.tables:
+                        if tbl._element == child:
+                            target_table = tbl
+                            break
+                    break
+                elif tag == 'p':
+                    para_style = child.find('.//' + qn('w:pStyle'))
+                    if para_style is not None:
+                        sv = para_style.get(qn('w:val'), '')
+                        if 'Heading' in sv or 'heading' in sv:
+                            break   # hit next heading before finding table
+
+        if target_table is None:
+            print(f"[delete_urs_row] No table found under heading '{heading_text}'")
+            return False
+
+        # ── Step 3: find and delete the matching row ───────────────────────────
+        row_to_delete = None
+        for row in target_table.rows[1:]:       # skip header
+            ucells = unique_cells(row)
+            if ucells and ucells[0].text.strip() == urs_id:
+                row_to_delete = row
+                break
+
+        if row_to_delete is None:
+            print(f"[delete_urs_row] Row with URS ID '{urs_id}' not found in table")
+            return False
+
+        target_table._element.remove(row_to_delete._element)
+        print(f"[delete_urs_row] Removed row with URS ID '{urs_id}'")
+
+        # ── Step 4: renumber remaining rows sequentially ──────────────────────
+        self._renumber_urs_rows(target_table)
+        print(f"[delete_urs_row] Renumbered remaining rows sequentially")
+
+        self._format_table(target_table)
+        self.save()
+        return True
+
+# -------------------- HELPERS --------------------
+def get_project_folder_name(project_id: int, app_name: str = None) -> str:
+    """
+    Build a human-readable, filesystem-safe folder name for a project.
+    Format: {sanitized_app_name}_project_{id}  OR  project_{id} if no app name.
+    Examples:
+      'Valisure Auth System' + 2  →  'Valisure_Auth_System_project_2'
+      '' + 9                      →  'project_9'
+    """
+    import re
+    if app_name and app_name.strip():
+        # Remove characters forbidden in Windows/Linux folder names
+        safe = re.sub(r'[\\/:*?"<>|,]', '', app_name.strip())
+        # Collapse whitespace to underscores
+        safe = re.sub(r'\s+', '_', safe)
+        # Trim trailing underscores and cap length
+        safe = safe[:40].rstrip('_')
+        if safe:
+            return f"{safe}_project_{project_id}"
+    return f"project_{project_id}"
+
+
+def get_app_name_for_project(db: Session, project_id: int) -> str:
+    """Fetch system_application_name for a project, or '' if not set."""
+    try:
+        from models import ProjectDetailsModel
+        details = db.query(ProjectDetailsModel).filter_by(project_id=project_id).first()
+        return (details.system_application_name or "") if details else ""
+    except Exception:
+        return ""
+
+
+def get_user_file_path(user: UserModel, filename: str, project_id: int = None, app_name: str = None):
+    """
+    Return the absolute path for a document file.
+    Files are stored under:  BASE_PATH/{AppName}_project_{id}/{filename}
+    Each project has its own isolated subdirectory named after its application.
+    """
+    # Build per-project subdirectory
+    if project_id:
+        folder = get_project_folder_name(project_id, app_name)
+        project_dir = os.path.join(BASE_PATH, folder)
+    else:
+        project_dir = BASE_PATH
+    os.makedirs(project_dir, exist_ok=True)
+
+    # Normalize URS filename to master template name
     filename_upper = filename.upper()
     if "URS" in filename_upper and ("USER REQ" in filename_upper or "USER REQUEST" in filename_upper):
         filename = "URS - User Requirements Specification.docx"
     else:
         filename = filename if filename.endswith(".docx") else filename + ".docx"
 
-    # Return the path directly in BASE_PATH (backend/docs/)
-    full_path = os.path.join(BASE_PATH, filename)
+    full_path = os.path.join(project_dir, filename)
     print(f"[DEBUG] Document path: {full_path}")
     return full_path
 
@@ -699,7 +894,8 @@ def create_file(
         
     try:
         import shutil
-        path = get_user_file_path(current_user, req.filename, project_id)
+        app_name = get_app_name_for_project(db, project_id)
+        path = get_user_file_path(current_user, req.filename, project_id, app_name)
         is_new = not os.path.exists(path)
         
         debug_log = f"Creating: {req.filename}\nPath: {path}\nIs New: {is_new}\n"
@@ -778,8 +974,9 @@ def add_under(
     project_id: int = Depends(get_active_project_id)
 ):
     import shutil
-    path = get_user_file_path(current_user, req.filename, project_id)
-    print(f"[add-under] Project Context: {project_id} | User: {current_user.username} | File: {req.filename}")
+    app_name = get_app_name_for_project(db, project_id)
+    path = get_user_file_path(current_user, req.filename, project_id, app_name)
+    print(f"[add-under] Project Context: {project_id} | App: {app_name or '(none)'} | User: {current_user.username} | File: {req.filename}")
 
     # ── Detect Word lock file: Word creates ~$<filename> when a doc is open ──
     lock_filename = "~$" + os.path.basename(path)
@@ -893,6 +1090,74 @@ def delete_entry(
     db.commit()
     return {"message": "Entry deleted"}
 
+
+@app.delete("/delete-urs-row")
+def delete_urs_row_endpoint(
+    filename: str,
+    urs_id: str,
+    entry_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+    project_id: int = Depends(get_active_project_id)
+):
+    """
+    Delete the Word document table row matching urs_id under '8.0 USER REQUIREMENTS',
+    renumber remaining rows sequentially, delete the DB entry if provided,
+    and sync the updated document to Google Drive.
+    """
+    app_name = get_app_name_for_project(db, project_id)
+    path = get_user_file_path(current_user, filename, project_id, app_name)
+
+    # ── Word lock check (same guard as /add-under) ────────────────────────────
+    lock_filename = "~$" + os.path.basename(path)
+    lock_path = os.path.join(os.path.dirname(path), lock_filename)
+    if os.path.exists(lock_path):
+        print(f"[delete-urs-row] LOCKED: Word lock file found at {lock_path}")
+        raise HTTPException(423, "FILE_LOCKED: The Word document is currently open. Please close it and try again.")
+
+    if not os.path.exists(path):
+        raise HTTPException(404, f"Document not found: {path}")
+
+    ctrl = Controller(path)
+
+    # ── Delete row from Word table and renumber ───────────────────────────────
+    deleted = ctrl.delete_urs_row_from_table("8.0 USER REQUIREMENTS", urs_id)
+    if not deleted:
+        print(f"[delete-urs-row] Row '{urs_id}' not found in document — continuing with DB cleanup only")
+
+    # ── Delete DB entry if provided ───────────────────────────────────────────
+    if entry_id:
+        entry = db.query(DocumentEntryModel).filter_by(id=entry_id).first()
+        if entry:
+            doc_rec = db.query(DocumentModel).filter_by(
+                id=entry.document_id, user_id=current_user.id
+            ).first()
+            if doc_rec:
+                db.delete(entry)
+                db.commit()
+                print(f"[delete-urs-row] Deleted DB entry id={entry_id}")
+
+    # ── Sync updated .docx back to Google Drive ───────────────────────────────
+    try:
+        from google_drive_service import sync_document_to_drive
+        from models import ProjectDetailsModel
+        proj_details = db.query(ProjectDetailsModel).filter_by(project_id=project_id).first()
+        drive_folder_id = proj_details.drive_folder_id if proj_details else None
+        if drive_folder_id:
+            doc_filename = filename if filename.endswith(".docx") else filename + ".docx"
+            fn_upper = doc_filename.upper()
+            if "URS" in fn_upper and ("USER REQ" in fn_upper or "USER REQUEST" in fn_upper):
+                doc_filename = "URS - User Requirements Specification.docx"
+            sync_document_to_drive(path, doc_filename, drive_folder_id)
+        else:
+            print(f"[delete-urs-row] No drive_folder_id for project {project_id} — Drive sync skipped.")
+    except Exception as drive_err:
+        print(f"[delete-urs-row] Drive sync failed (non-fatal): {drive_err}")
+    # ─────────────────────────────────────────────────────────────────────────
+
+    return {"message": "URS row deleted and document renumbered", "deleted_from_doc": deleted}
+
+
 @app.post("/add-end")
 def add_end(
     req: AddEndRequest,
@@ -900,7 +1165,8 @@ def add_end(
     current_user: UserModel = Depends(get_current_user),
     project_id: int = Depends(get_active_project_id)
 ):
-    path = get_user_file_path(current_user, req.filename, project_id)
+    app_name = get_app_name_for_project(db, project_id)
+    path = get_user_file_path(current_user, req.filename, project_id, app_name)
 
     ctrl = Controller(path)
     if req.heading:
@@ -951,10 +1217,12 @@ def delete_document(
     if not doc:
         raise HTTPException(404, "Document not found")
 
+    saved_project_id = doc.project_id
     db.delete(doc)
     db.commit()
 
-    path = get_user_file_path(current_user, filename, doc.project_id)
+    app_name = get_app_name_for_project(db, saved_project_id)
+    path = get_user_file_path(current_user, filename, saved_project_id, app_name)
     if os.path.exists(path):
         os.remove(path)
 
@@ -1145,15 +1413,18 @@ def delete_project(
         raise HTTPException(404, "Project not found")
         
     # Delete associated document files from disk
-    docs = db.query(DocumentModel).filter_by(project_id=project_id).all()
-    for doc in docs:
-        path = get_user_file_path(current_user, doc.filename, project_id)
-        if os.path.exists(path):
-            try:
-                os.remove(path)
-            except:
-                pass
-        
+    # Remove the entire project folder (e.g. Valisure_Auth_project_2/)
+    app_name = get_app_name_for_project(db, project_id)
+    folder = get_project_folder_name(project_id, app_name)
+    project_dir = os.path.join(BASE_PATH, folder)
+    if os.path.exists(project_dir):
+        try:
+            import shutil
+            shutil.rmtree(project_dir)
+            print(f"[delete_project] Removed project folder: {project_dir}")
+        except Exception as rm_err:
+            print(f"[delete_project] Could not remove folder {project_dir}: {rm_err}")
+
     # Explicitly delete all user-project assignments so it disappears for everyone
     try:
         from models import UserProjectRoleModel
@@ -1181,7 +1452,8 @@ def update_stage(
             raise HTTPException(404, "Document not found")
 
         # Get file path and add content to Word document using AddUnder logic
-        path = get_user_file_path(current_user, req.filename, doc.project_id)
+        app_name = get_app_name_for_project(db, doc.project_id)
+        path = get_user_file_path(current_user, req.filename, doc.project_id, app_name)
         ctrl = Controller(path)
         heading = f"Sample Requirement {req.stage}"
         
@@ -1234,7 +1506,8 @@ def get_document_info(
         raise HTTPException(404, "Document not found")
 
     # Open the Word document
-    path = get_user_file_path(current_user, filename, doc.project_id)
+    app_name = get_app_name_for_project(db, doc.project_id)
+    path = get_user_file_path(current_user, filename, doc.project_id, app_name)
     ctrl = Controller(path)
     
     # Get current stage (don't increment)
@@ -1395,7 +1668,8 @@ def create_heading(
         heading_text = f"Sample Requirement {next_stage}"
 
         # Check if heading already exists in Word document
-        path = get_user_file_path(current_user, req.filename)
+        app_name = get_app_name_for_project(db, doc.project_id)
+        path = get_user_file_path(current_user, req.filename, doc.project_id, app_name)
         ctrl = Controller(path)
         
         heading_exists = False
@@ -1685,7 +1959,8 @@ def update_heading_content(
         db.commit()
 
         # Update in Word document
-        path = get_user_file_path(current_user, req.filename)
+        app_name = get_app_name_for_project(db, doc.project_id)
+        path = get_user_file_path(current_user, req.filename, doc.project_id, app_name)
         ctrl = Controller(path)
         ctrl.addunder(entry.heading_text, req.content) 
 
