@@ -1,4 +1,20 @@
-# ValiSure — Enterprise Validation & Traceability Automation Platform
+<div align="center">
+
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="frontend/public/images/logo.png">
+    <source media="(prefers-color-scheme: light)" srcset="frontend/public/images/logo.png">
+    <img alt="ValiSure logo" src="frontend/public/images/logo.png" width="120">
+  </picture>
+  <br>
+  ValiSure (<code>valisure</code>)
+</h1>
+
+**TypeScript** (Frontend) · **Python** (Backend) · **SQL** (PostgreSQL Database) · **HTML/CSS** (Vanilla CSS Layout)
+
+</div>
+
+---
 
 ValiSure is a professional, compliance-first document generation and requirements management platform built specifically for the **Life Sciences, Pharmaceutical, and Medical Device** industries. It automates Computer System Validation (CSV) and Computer Software Assurance (CSA) documentation workflows while ensuring strict compliance with global regulatory standards like **US FDA 21 CFR Part 11** and **EU GMP Annex 11**.
 
@@ -6,42 +22,37 @@ ValiSure is a professional, compliance-first document generation and requirement
 
 ## 🌟 Core Value Propositions
 
-- **AI-Enhanced Requirement Authoring**: Transforms raw user requirements into formal, auditor-ready _"The system shall..."_ specifications automatically.
-- **Dynamic Methodology Switching**: Tailors prompts, risk assessment terminology, and testing approaches dynamically depending on whether a project follows **CSV** or **CSA** guidelines.
-- **Compliant Document Generation**: Direct-writes formatted tables, replaces placeholders (e.g. `<<Software Name and version>>`), and updates revision histories directly inside master `.docx` templates.
-- **Per-Project Isolation**: Organizes project documents inside individual filesystem directories named after the application and project ID (`{AppName}_project_{id}`) to prevent data cross-contamination.
-- **Regulatory Traceability**: Maps user requirements directly to international regulatory clauses (e.g. 21 CFR §11.10(d) for authentication controls).
-- **Alibi Audit Trailing**: Captures full user actions and document modifications to meet electronic signature and security validation expectations.
+*   **AI-Enhanced Requirement Authoring**: Transforms raw user requirements into formal, auditor-ready *"The system shall..."* specifications automatically.
+*   **Dynamic Methodology Switching**: Tailors prompts, risk assessment terminology, and testing approaches dynamically depending on whether a project follows **CSV** or **CSA** guidelines.
+*   **Compliant Document Generation**: Direct-writes formatted tables, replaces placeholders (e.g. `<<Software Name and version>>`), and updates revision histories directly inside master `.docx` templates.
+*   **Per-Project Isolation**: Organizes project documents inside individual filesystem directories named after the application and project ID (`{AppName}_project_{id}`) to prevent data cross-contamination.
+*   **Regulatory Traceability**: Maps user requirements directly to international regulatory clauses (e.g. 21 CFR §11.10(d) for authentication controls).
+*   **Alibi Audit Trailing**: Captures full user actions and document modifications to meet electronic signature and security validation expectations.
 
 ---
 
 ## 🧩 Key Platform Modules & Workflows
 
 ### 1. Requirements Lifecycle Control (`Draft` ➔ `Submitted`)
-
-- **Collaborative Authoring**: Users create requirements in a scratchpad status (`Draft`) where they can run multiple AI iterations to optimize wording.
-- **Validation Freeze**: Once finalized, requirements are promoted to `Submitted`. This triggers a direct write to the project's MS Word document, freezing the requirement configuration for validation reviews.
-- **Safe Renumbering & Sync**: Deleting a requirement triggers sequential renumbering on both `localStorage` and the active `.docx` file (`URS_001`, `URS_002`, ...), keeping the UI and document in perfect order.
+*   **Collaborative Authoring**: Users create requirements in a scratchpad status (`Draft`) where they can run multiple AI iterations to optimize wording.
+*   **Validation Freeze**: Once finalized, requirements are promoted to `Submitted`. This triggers a direct write to the project's MS Word document, freezing the requirement configuration for validation reviews.
+*   **Safe Renumbering & Sync**: Deleting a requirement triggers sequential renumbering on both `localStorage` and the active `.docx` file (`URS_001`, `URS_002`, ...), keeping the UI and document in perfect order.
 
 ### 2. Common Requirements Selector Hub
-
-- **Global Templates**: A repository of pre-approved, global templates (e.g. general IT security policies, login rules) stored in a shared pool (`URS_CR_xxx`).
-- **Import Engine**: Validation authors can search and select multiple common requirements in a modal to copy them directly into their current project's `.docx` document and DB as `Submitted`.
+*   **Global Templates**: A repository of pre-approved, global templates (e.g. general IT security policies, login rules) stored in a shared pool (`URS_CR_xxx`).
+*   **Import Engine**: Validation authors can search and select multiple common requirements in a modal to copy them directly into their current project's `.docx` document and DB as `Submitted`.
 
 ### 3. File Lock Safeguards & Auto-Recovery
-
-- **Active Word Locks**: Before modifying any document on the disk, the backend checks for Microsoft Word lock files (`~$*.docx`). If a file is open, the system blocks the update with a clear alert to prevent data corruption.
-- **Self-Healing Templates**: If a document record exists but the `.docx` file is missing, the backend automatically clones a fresh copy of the master template on the next write attempt.
+*   **Active Word Locks**: Before modifying any document on the disk, the backend checks for Microsoft Word lock files (`~$*.docx`). If a file is open, the system blocks the update with a clear alert to prevent data corruption.
+*   **Self-Healing Templates**: If a document record exists but the `.docx` file is missing, the backend automatically clones a fresh copy of the master template on the next write attempt.
 
 ### 4. Compliant Audit Trail (21 CFR §11.10(e))
-
-- **Full Attribution Logging**: Records user accounts, time stamps, event categories, database transactions, and file mutations.
-- **Audit Middleware**: Intercepts FastAPI routes to trace all database writes and logins, ensuring all actions are logged.
+*   **Full Attribution Logging**: Records user accounts, time stamps, event categories, database transactions, and file mutations.
+*   **Audit Middleware**: Intercepts FastAPI routes to trace all database writes and logins, ensuring all actions are logged.
 
 ### 5. Access Management & Role Assignment
-
-- **Role Seeding**: Seeding standard industry permissions (`Admin`, `Validation Lead`, `Author/Editor`, `Reviewer`).
-- **Project-Specific Teams**: Assigns specific users to specific projects with granular roles to preserve data security across business units.
+*   **Role Seeding**: Seeding standard industry permissions (`Admin`, `Validation Lead`, `Author/Editor`, `Reviewer`).
+*   **Project-Specific Teams**: Assigns specific users to specific projects with granular roles to preserve data security across business units.
 
 ---
 
@@ -67,14 +78,14 @@ graph TD
 
 ValiSure has built-in clause referencing sheets for **6 core standards**:
 
-| Standard            | Scope / Focus                   | Active Clause Mapping in ValiSure                                                            |
-| :------------------ | :------------------------------ | :------------------------------------------------------------------------------------------- |
-| **21 CFR Part 11**  | Electronic Records & Signatures | §11.10(a) Validation, §11.10(d) Access Limits, §11.10(e) Audit Trails, §11.10(g) Role Checks |
-| **21 CFR Part 820** | Medical Device Quality Systems  | §820.30 Design Controls, §820.40 Document Controls, §820.70 Process Controls                 |
-| **EU GMP Annex 11** | Computerised Systems (Europe)   | Clause 1 Risk Management, Clause 4 Validation, Clause 9 Audit Trails                         |
-| **ISO 13485**       | Medical Device QMS              | §4.2.3 Document Control, §4.2.4 Control of Records, §7.3 Design & Development                |
-| **21 CFR Part 210** | cGMP Manufacturing General      | General manufacturing systems, data accuracy and batch record controls                       |
-| **21 CFR Part 211** | cGMP Finished Pharmaceuticals   | Production systems, validation standards for drug product computerized systems               |
+| Standard | Scope / Focus | Active Clause Mapping in ValiSure |
+| :--- | :--- | :--- |
+| **21 CFR Part 11** | Electronic Records & Signatures | §11.10(a) Validation, §11.10(d) Access Limits, §11.10(e) Audit Trails, §11.10(g) Role Checks |
+| **21 CFR Part 820** | Medical Device Quality Systems | §820.30 Design Controls, §820.40 Document Controls, §820.70 Process Controls |
+| **EU GMP Annex 11** | Computerised Systems (Europe) | Clause 1 Risk Management, Clause 4 Validation, Clause 9 Audit Trails |
+| **ISO 13485** | Medical Device QMS | §4.2.3 Document Control, §4.2.4 Control of Records, §7.3 Design & Development |
+| **21 CFR Part 210** | cGMP Manufacturing General | General manufacturing systems, data accuracy and batch record controls |
+| **21 CFR Part 211** | cGMP Finished Pharmaceuticals | Production systems, validation standards for drug product computerized systems |
 
 ---
 
@@ -125,13 +136,11 @@ ValiSure dynamically adjusts the generated document terminology and testing crit
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
-
 - **Node.js** (v18.0+)
 - **Python** (3.9+)
 - **PostgreSQL** Database Instance
 
 ### 2. Backend Installation & Run
-
 1.  Navigate to the `backend` directory:
     ```bash
     cd backend
@@ -159,7 +168,6 @@ ValiSure dynamically adjusts the generated document terminology and testing crit
     ```
 
 ### 3. Frontend Installation & Run
-
 1.  Navigate to the `frontend` directory:
     ```bash
     cd frontend
@@ -172,14 +180,13 @@ ValiSure dynamically adjusts the generated document terminology and testing crit
     ```bash
     npm run dev
     ```
-4.  Open your browser and navigate to [http://localhost:5173](http://localhost:5173).
+4.  Open your browser and navigate to [http://localhost:5173](http://localhost:5173). Log in with the seeded admin account (`admin` / `admin@123`).
 
 ---
 
 ## 📥 Git Workflow Guidelines
 
 When submitting code changes:
-
 1.  **Verify status and track changes**:
     ```bash
     git status
