@@ -7,16 +7,16 @@
     <img alt="ValiSure logo" src="frontend/public/images/logo.png" width="120">
   </picture>
   <br>
-  ValiSure (<code>valisure</code>)
+  ValiSure
 </h1>
 
-**TypeScript** (Frontend) · **Python** (Backend) · **SQL** (PostgreSQL Database) · **HTML/CSS** (Vanilla CSS Layout)
+**ValiSure** is a professional, compliance-first document generation and requirements management platform built specifically for the **Life Sciences, Pharmaceutical, and Medical Device** industries. It automates Computer System Validation (CSV) and Computer Software Assurance (CSA) documentation workflows while ensuring strict compliance with global regulatory standards like **US FDA 21 CFR Part 11** and **EU GMP Annex 11**.
+
+
+<img width="1858" height="936" alt="image" src="https://github.com/user-attachments/assets/c16ab152-c8e2-4d6e-a8e0-8788bf35149e" />
 
 </div>
 
----
-
-ValiSure is a professional, compliance-first document generation and requirements management platform built specifically for the **Life Sciences, Pharmaceutical, and Medical Device** industries. It automates Computer System Validation (CSV) and Computer Software Assurance (CSA) documentation workflows while ensuring strict compliance with global regulatory standards like **US FDA 21 CFR Part 11** and **EU GMP Annex 11**.
 
 ---
 
