@@ -93,18 +93,21 @@ ValiSure has built-in clause referencing sheets for **6 core standards**:
 
 ValiSure dynamically adjusts the generated document terminology and testing criteria based on your project's selected validation strategy:
 
-```
-                  ┌───────────────────────────────┐
-                  │      Validation Strategy      │
-                  └───────────────┬───────────────┘
-                                  │
-         ┌────────────────────────┴────────────────────────┐
-         ▼                                                 ▼
-┌──────────────────┐                              ┌──────────────────┐
-│       CSV        │                              │       CSA        │
-└────────┬─────────┘                              └────────┬─────────┘
-         ├─► Risk Level: Numeric (Risk - 1/2/3)            ├─► Risk Level: Critical / Non-Critical
-         └─► Testing: Scripted / Unscripted / Ad-hoc       └─► Testing: Scripted / Exploratory
+```mermaid
+graph TD
+    A["Validation Strategy Selection"]
+    A --> B["CSV (Computer System Validation)"]
+    A --> C["CSA (Computer Software Assurance)"]
+    
+    subgraph CSV [CSV Pipeline]
+        B --> B1["Risk Scoring: Numeric (Risk - 1/2/3)"]
+        B --> B2["Testing approach: Scripted / Unscripted / Ad-hoc"]
+    end
+    
+    subgraph CSA [CSA Pipeline]
+        C --> C1["Risk Scoring: Critical / Non-Critical"]
+        C --> C2["Testing approach: Scripted / Exploratory"]
+    end
 ```
 
 ---
@@ -140,32 +143,63 @@ ValiSure dynamically adjusts the generated document terminology and testing crit
 - **Python** (3.9+)
 - **PostgreSQL** Database Instance
 
-### 2. Backend Installation & Run
-1.  Navigate to the `backend` directory:
-    ```bash
-    cd backend
-    ```
-2.  Create a `.env` file using the template:
-    ```env
-    DB_HOST=localhost
-    DB_PORT=5432
-    DB_USER=your_db_user
-    DB_PASS=your_db_password
-    DB_NAME=valisure_db
-    SECRET_KEY=your_secret_key
-    ```
-3.  Install python dependencies in your environment:
-    ```bash
-    pip install -r requirements.txt
-    ```
-4.  Run database migrations and seed default roles/admin user:
-    ```bash
-    python setup_db.py
-    ```
-5.  Start the FastAPI development server:
-    ```bash
-    uvicorn python:app --reload --port 8000
-    ```
+### 2. Backend Setup & Run (3 Services)
+To support 21 CFR Part 11 compliant audit logging, the backend relies on an asynchronous architecture. You must run **three separate services** simultaneously in separate terminal windows:
+#### 1️⃣ Start Redis Broker (Terminal 1)
+Redis serves as the task queue broker. Start a Redis server instance:
+```bash
+# Using Docker (recommended)
+docker run -d -p 6380:6380 redis:latest
+# Or local Redis Server (make sure to match port 6380 used in db_config)
+redis-server --port 6380
+```
+#### 2️⃣ Run Database Seeding & FastAPI Server (Terminal 2)
+1. Navigate to the `backend` directory and activate virtual env:
+   ```bash
+   cd backend
+   # Windows:
+   venv\Scripts\activate
+   # macOS/Linux:
+   source venv/bin/activate
+   ```
+2. Create your `.env` file from the configuration keys:
+   ```env
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_USER=your_db_user
+   DB_PASS=your_db_password
+   DB_NAME=valisure_db
+   SECRET_KEY=your_secret_key
+   REDIS_URL=redis://localhost:6380/0
+   ```
+3. Install dependencies and run initialization:
+   ```bash
+   pip install -r requirements.txt
+   python setup_db.py
+   ```
+4. Launch the FastAPI server:
+   ```bash
+   uvicorn python:app --reload --port 8000
+   ```
+#### 3️⃣ Start the Celery Worker (Terminal 3)
+The worker consumes compliance log tasks from Redis and writes them to the database asynchronously.
+1. Open a new terminal, navigate to the `backend` directory, and activate virtual env:
+   ```bash
+   cd backend
+   # Windows:
+   venv\Scripts\activate
+   # macOS/Linux:
+   source venv/bin/activate
+   ```
+2. Run the Celery worker startup script:
+   ```bash
+   # Windows (PowerShell):
+   .\run_worker.ps1
+   # macOS/Linux:
+   chmod +x run_worker.sh
+   ./run_worker.sh
+   ```
+*(You can verify the audit engine status by hitting `GET http://localhost:8000/health/audit`)*
 
 ### 3. Frontend Installation & Run
 1.  Navigate to the `frontend` directory:
@@ -180,7 +214,7 @@ ValiSure dynamically adjusts the generated document terminology and testing crit
     ```bash
     npm run dev
     ```
-4.  Open your browser and navigate to [http://localhost:5173](http://localhost:5173). Log in with the seeded admin account (`admin` / `admin@123`).
+4.  Open your browser and navigate to [http://localhost:5173](http://localhost:5173).
 
 ---
 
